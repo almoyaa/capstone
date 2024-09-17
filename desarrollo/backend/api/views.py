@@ -3,14 +3,12 @@ import json
 import openai
 from django.shortcuts import render
 from rest_framework import generics
-from .models import Usuario, Cuestionario, Pregunta
+from .models import Usuario, Cuestionario, Pregunta, Respuesta
 from .serializers import UsuarioSerializer, CuestionarioSerializer, PreguntaSerializer
 from django.views.decorators.csrf import csrf_exempt
 from django.conf import settings
 from django.http import JsonResponse
 from dotenv import load_dotenv
-
-
 load_dotenv()
 
 class UsuarioCreateView(generics.CreateAPIView):
@@ -44,20 +42,18 @@ def chatgpt_view(request):
     if request.method == 'POST':
         try:
             data = json.loads(request.body)
-            materia = data.get('materia', 'Biología')  # Puedes ajustar este valor
-            nivel = data.get('nivel', '1M')  # Puedes ajustar este valor
-
+            materia = data.get('materia')
+            nivel = data.get('nivel')
             prompt = f"""
-            Genera una pregunta de opción múltiple sobre {materia} para estudiantes de {nivel}. La pregunta debe tener 5 opciones de respuesta. Devuélveme el resultado en el siguiente formato JSON:
-
+            Genera una pregunta de opción múltiple sobre {materia} para un estudiante de {nivel} bajo el temario de estudio de la PAES CHILE 2023 o la más actualizada que tengas. La pregunta debe tener 5 opciones de respuesta y una es la correcta aleatoriamente. Devuélveme el resultado en el siguiente formato JSON:
             {{
                 "pregunta": "Texto de la pregunta",
                 "opciones": [
-                    {{"texto": "Opción 1", "es_correcta": false}},
-                    {{"texto": "Opción 2", "es_correcta": false}},
-                    {{"texto": "Opción 3", "es_correcta": true}},
-                    {{"texto": "Opción 4", "es_correcta": false}},
-                    {{"texto": "Opción 5", "es_correcta": false}}
+                    {{"texto": "Opción 1", "es_correcta": none}},
+                    {{"texto": "Opción 2", "es_correcta": none}},
+                    {{"texto": "Opción 3", "es_correcta": none}},
+                    {{"texto": "Opción 4", "es_correcta": none}},
+                    {{"texto": "Opción 5", "es_correcta": none}}
                 ]
             }}
             """
@@ -70,17 +66,15 @@ def chatgpt_view(request):
 
             content = response.choices[0].message.content.strip()
 
-            # Convertir la respuesta en JSON
             question_data = json.loads(content)
 
-            # Guardar la pregunta en la base de datos
             pregunta = Pregunta.objects.create(
                 texto_pregunta=question_data["pregunta"],
                 nivel=nivel,
                 materia=materia
             )
 
-            # Guardar las respuestas en la base de datos
+            #SE GUARDA RESPUESTA EN BASE DE DATOS
             for opcion in question_data["opciones"]:
                 Respuesta.objects.create(
                     texto_respuesta=opcion["texto"],
