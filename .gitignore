@@ -1,1 +1,3 @@
-/desarrollo/.venv
+/desarrollo/venv
+/desarrollo/backend/__pycache__
+/desarrollo/.env
