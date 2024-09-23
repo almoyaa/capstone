@@ -1,4 +1,4 @@
-
+import os
 from pathlib import Path
 
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -10,7 +10,6 @@ DEBUG = True
 ALLOWED_HOSTS = ["*"]
 
 
-# Application definition
 
 INSTALLED_APPS = [
     'django.contrib.admin',
@@ -54,8 +53,6 @@ TEMPLATES = [
 WSGI_APPLICATION = 'backend.wsgi.application'
 
 
-# Database
-# https://docs.djangoproject.com/en/5.1/ref/settings/#databases
 
 DATABASES = {
     'default': {
@@ -96,10 +93,14 @@ USE_I18N = True
 USE_TZ = True
 
 
-# Static files (CSS, JavaScript, Images)
-# https://docs.djangoproject.com/en/5.1/howto/static-files/
-
 STATIC_URL = 'static/'
+#ESTO ES PARA PODER SUBIR IMAGENES A LA BASE DE DATOS, Y EN QUE CARPETA SE GUARDARA
+MEDIA_URL = ''
+
+MEDIA_ROOT = BASE_DIR/'media'
+
+STATICFILES_DIRS = (os.path.join(BASE_DIR,'api/static'),)
+
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.1/ref/settings/#default-auto-field

@@ -9,6 +9,7 @@ from django.views.decorators.csrf import csrf_exempt
 from django.conf import settings
 from django.http import JsonResponse
 from dotenv import load_dotenv
+from django.views.generic import TemplateView
 load_dotenv()
 
 class UsuarioCreateView(generics.CreateAPIView):
@@ -33,7 +34,6 @@ class PreguntaCreateView(generics.CreateAPIView):
 class PreguntaAllView(generics.ListAPIView):
     queryset = Pregunta.objects.all()
     serializer_class = PreguntaSerializer
-
 
 client = openai.OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
@@ -90,3 +90,8 @@ def chatgpt_view(request):
             return JsonResponse({"error": str(e)}, status=500)
     else:
         return JsonResponse({"error": "Método de solicitud no permitido."}, status=405)
+
+
+
+class IndexTemplateView(TemplateView):
+    template_name = "index.html"

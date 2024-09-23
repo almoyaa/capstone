@@ -1,5 +1,5 @@
 from django.urls import path
-from .views import UsuarioCreateView, CuestionarioCreateView, UsuarioAllView, CuestionarioAllView, PreguntaCreateView, PreguntaAllView, chatgpt_view
+from .views import UsuarioCreateView, CuestionarioCreateView, UsuarioAllView, CuestionarioAllView, PreguntaCreateView, PreguntaAllView, chatgpt_view, IndexTemplateView
 
 urlpatterns = [
     path('crear-usuario/', UsuarioCreateView.as_view(), name='crear-usuario'),
