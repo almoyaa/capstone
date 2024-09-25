@@ -95,3 +95,6 @@ def chatgpt_view(request):
 
 class IndexTemplateView(TemplateView):
     template_name = "index.html"
+
+class PreguntaTemplateView(TemplateView):
+    template_name="pregunta.html"

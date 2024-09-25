@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    {%load static%}
+    <link rel="stylesheet" href="{%static '/css/pregunta.css' %}" />
+    <title>Document</title>
+</head>
+
+<body>
+    {%include "navbar.html"%}
+    <div>
+        <form action="POST">
+            <div class="pregunta-container">
+                <p>Lorem ipsum dolor sit, amet consectetur adipisicing elit. Nulla autem ipsum quaerat tempora
+                    eligendi,
+                    odio
+                    alias, similique unde a quod error, quisquam molestiae nihil amet incidunt cupiditate iusto hic
+                    deserunt?
+                </p>
+            </div>
+            <div class="respuestas-container">
+                <input type="hidden" id="selected_answer" name="selected_answer" value="">
+
+                <button type="button" onclick="selectAnswer(this)">Opción 1: Esta es la respuesta A</button>
+                <button type="button" onclick="selectAnswer(this)">Opción 2: Esta es la respuesta B</button>
+                <button type="button" onclick="selectAnswer(this)">Opción 3: Esta es la respuesta C</button>
+                <button type="button" onclick="selectAnswer(this)">Opción 4: Esta es la respuesta D</button>
+            </div>
+        </form>
+        <div class="botones-container">
+            <button>Atrás</button>
+            <button>Siguiente</button>
+        </div>
+    </div>
+</body>
+
+</html>
