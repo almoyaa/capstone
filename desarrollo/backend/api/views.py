@@ -34,6 +34,10 @@ class PreguntaCreateView(generics.CreateAPIView):
 class PreguntaAllView(generics.ListAPIView):
     queryset = Pregunta.objects.all()
     serializer_class = PreguntaSerializer
+    
+class PreguntaDetailView(generics.RetrieveAPIView):
+    queryset = Pregunta.objects.all()
+    serializer_class = PreguntaSerializer
 
 client = openai.OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 

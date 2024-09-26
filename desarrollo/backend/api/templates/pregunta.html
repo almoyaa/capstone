@@ -1,40 +1,106 @@
-<!DOCTYPE html>
-<html lang="en">
-
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    {%load static%}
-    <link rel="stylesheet" href="{%static '/css/pregunta.css' %}" />
-    <title>Document</title>
+    {% load static %}
+    <link rel="stylesheet" href="{% static '/css/pregunta.css' %}" />
+    <title>Pregunta</title>
 </head>
 
-<body>
-    {%include "navbar.html"%}
-    <div>
-        <form action="POST">
-            <div class="pregunta-container">
-                <p>Lorem ipsum dolor sit, amet consectetur adipisicing elit. Nulla autem ipsum quaerat tempora
-                    eligendi,
-                    odio
-                    alias, similique unde a quod error, quisquam molestiae nihil amet incidunt cupiditate iusto hic
-                    deserunt?
-                </p>
-            </div>
-            <div class="respuestas-container">
-                <input type="hidden" id="selected_answer" name="selected_answer" value="">
+{% include "navbar.html" %}
 
-                <button type="button" onclick="selectAnswer(this)">Opción 1: Esta es la respuesta A</button>
-                <button type="button" onclick="selectAnswer(this)">Opción 2: Esta es la respuesta B</button>
-                <button type="button" onclick="selectAnswer(this)">Opción 3: Esta es la respuesta C</button>
-                <button type="button" onclick="selectAnswer(this)">Opción 4: Esta es la respuesta D</button>
-            </div>
-        </form>
-        <div class="botones-container">
-            <button>Atrás</button>
-            <button>Siguiente</button>
+<div>
+    <form class="form" action="" method="POST" onsubmit="return saveAns()">
+        {% csrf_token %}
+        <div class="pregunta-container">
+            <p id="pregunta-texto"></p>
         </div>
-    </div>
-</body>
 
-</html>
+        <div class="respuestas-container">
+            <!-- Campo oculto para almacenar la respuesta seleccionada -->
+            <input type="hidden" id="selected_answer" name="selected_answer" value="">
+
+            <!-- Botones de opciones, se generarán dinámicamente desde el script -->
+            <div id="respuestas-buttons"></div>
+        </div>
+    </form>
+
+    <div class="botones-container">
+        <button id="atras">Atrás</button>
+        <button id="siguiente" type="submit">Siguiente</button>
+    </div>
+</div>
+
+<!-- Script para mostrar la pregunta, respuestas y guardar la selección en cookies -->
+<script>
+    // JSON que contiene la pregunta y las respuestas
+    const pregunta = {
+        "id": 5,
+        "texto_pregunta": "¿Qué ley de la física establece que la cantidad de movimiento de un sistema cerrado permanece constante si no actúa ninguna fuerza externa sobre él?",
+        "nivel": "4º Medio",
+        "materia": "fisica",
+        "respuestas": [
+            {
+                "id": 10,
+                "texto_respuesta": "Ley de Newton",
+                "es_correcta": false
+            },
+            {
+                "id": 11,
+                "texto_respuesta": "Principio de conservación de la energía",
+                "es_correcta": false
+            },
+            {
+                "id": 12,
+                "texto_respuesta": "Principio de conservación de la carga eléctrica",
+                "es_correcta": false
+            },
+            {
+                "id": 13,
+                "texto_respuesta": "Principio de conservación del momento angular",
+                "es_correcta": false
+            },
+            {
+                "id": 14,
+                "texto_respuesta": "Principio de conservación del momento lineal",
+                "es_correcta": true
+            }
+        ]
+    };
+
+    // Mostrar la pregunta
+    document.getElementById('pregunta-texto').innerText = pregunta.texto_pregunta;
+
+    // Mostrar las respuestas como botones
+    const respuestasContainer = document.getElementById('respuestas-buttons');
+    pregunta.respuestas.forEach((respuesta) => {
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.innerText = respuesta.texto_respuesta;
+        button.onclick = function () {
+            selectAnswer(respuesta);
+        };
+        respuestasContainer.appendChild(button);
+    });
+
+    // Función para seleccionar una respuesta y almacenarla en cookies
+    function selectAnswer(respuesta) {
+        // Guarda la respuesta seleccionada en el campo oculto
+        document.getElementById('selected_answer').value = respuesta.texto_respuesta;
+
+        // Guarda la pregunta y respuesta en formato JSON en una cookie
+        const selectedData = {
+            id: pregunta.id,
+            pregunta: pregunta.texto_pregunta,
+            selected_answer: respuesta.texto_respuesta
+        };
+        setCookie('respuesta_seleccionada', JSON.stringify(selectedData), 3);
+    }
+
+    // Función para guardar la cookie
+    function setCookie(cname, cvalue, exdays) {
+        var d = new Date();
+        d.setTime(d.getTime() + (exdays * 24 * 60 * 60 * 1000));
+        var expires = "expires=" + d.toUTCString();
+        document.cookie = cname + "=" + cvalue + ";" + expires + ";path=/";
+    }
+</script>

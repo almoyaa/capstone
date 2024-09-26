@@ -1,5 +1,5 @@
 from django.urls import path
-from .views import UsuarioCreateView, CuestionarioCreateView, UsuarioAllView, CuestionarioAllView, PreguntaCreateView, PreguntaAllView, chatgpt_view, IndexTemplateView, PreguntaTemplateView
+from .views import UsuarioCreateView, CuestionarioCreateView, UsuarioAllView, CuestionarioAllView, PreguntaCreateView, PreguntaAllView, chatgpt_view, IndexTemplateView, PreguntaDetailView
 
 urlpatterns = [
     path('crear-usuario/', UsuarioCreateView.as_view(), name='crear-usuario'),
@@ -8,6 +8,6 @@ urlpatterns = [
     path('cuestionarios/', CuestionarioAllView.as_view(), name='ver-cuestionario'),
     path('crear-pregunta/', PreguntaCreateView.as_view(),name='crear-pregunta'),
     path('preguntas/', PreguntaAllView.as_view(),name='ver-pregunta'),
-    path('chatgpt/', chatgpt_view,name='chat-gpt'),
-    path('pregunta/',PreguntaTemplateView.as_view(), name='pregunta')
+    path('pregunta/<int:pk>', PreguntaDetailView.as_view(),name='ver-pregunta'),
+    path('chatgpt/', chatgpt_view,name='chat-gpt')
 ]

@@ -34,6 +34,8 @@ button {
     color: #D9D9D9;
     border-radius: 15px;
     border: none;
+    transition: background-color 0.3s ease;
+    border: 1px solid white;
 }
 
 .botones-container {
@@ -43,10 +45,26 @@ button {
 
 }
 
+.respuestas-container button:hover {
+    cursor: pointer;
+    background-color: white;
+    border: 1px solid black;
+    color: black;
+    text-decoration: underline;
+}
+
 .botones-container button {
     max-width: 300px;
     border-radius: 10px;
-    border: none;
     margin: 0;
     font-size: 16px;
+    transition: background-color 0.3s ease;
+
+}
+
+.botones-container button:hover {
+    background-color: white;
+    color: black;
+    border: 1px solid gray;
+    cursor: pointer;
 }
