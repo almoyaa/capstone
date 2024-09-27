@@ -25,74 +25,84 @@
     </form>
 
     <div class="botones-container">
-        <button id="atras">Atrás</button>
-        <button id="siguiente" type="submit">Siguiente</button>
+        <button id="siguiente" type="button" onclick="obtenerPregunta()">Siguiente</button>
+    </div>
+
+    <!-- Indicador de carga -->
+    <div id="loading-indicator" style="display:none;">
+        <p>Cargando pregunta...</p>
     </div>
 </div>
 
-<!-- Script para mostrar la pregunta, respuestas y guardar la selección en cookies -->
 <script>
-    // JSON que contiene la pregunta y las respuestas
-    const pregunta = {
-        "id": 5,
-        "texto_pregunta": "¿Qué ley de la física establece que la cantidad de movimiento de un sistema cerrado permanece constante si no actúa ninguna fuerza externa sobre él?",
-        "nivel": "4º Medio",
-        "materia": "fisica",
-        "respuestas": [
-            {
-                "id": 10,
-                "texto_respuesta": "Ley de Newton",
-                "es_correcta": false
-            },
-            {
-                "id": 11,
-                "texto_respuesta": "Principio de conservación de la energía",
-                "es_correcta": false
-            },
-            {
-                "id": 12,
-                "texto_respuesta": "Principio de conservación de la carga eléctrica",
-                "es_correcta": false
-            },
-            {
-                "id": 13,
-                "texto_respuesta": "Principio de conservación del momento angular",
-                "es_correcta": false
-            },
-            {
-                "id": 14,
-                "texto_respuesta": "Principio de conservación del momento lineal",
-                "es_correcta": true
-            }
-        ]
-    };
+    // Función para obtener la siguiente pregunta de la vista chatgpt
+    function obtenerPregunta() {
+        // Muestra el indicador de carga
+        document.getElementById('loading-indicator').style.display = 'block';
 
-    // Mostrar la pregunta
-    document.getElementById('pregunta-texto').innerText = pregunta.texto_pregunta;
+        // Oculta el contenido mientras se espera la respuesta
+        document.querySelector('.pregunta-container').style.display = 'none';
+        document.querySelector('.respuestas-container').style.display = 'none';
 
-    // Mostrar las respuestas como botones
-    const respuestasContainer = document.getElementById('respuestas-buttons');
-    pregunta.respuestas.forEach((respuesta) => {
-        const button = document.createElement('button');
-        button.type = 'button';
-        button.innerText = respuesta.texto_respuesta;
-        button.onclick = function () {
-            selectAnswer(respuesta);
+        const requestData = {
+            materia: "Fisica",  // Ajusta estos valores según la necesidad
+            nivel: "4to Medio"
         };
-        respuestasContainer.appendChild(button);
-    });
+
+        fetch('/api/chatgpt/', {
+            method: 'POST', // Usa POST porque la vista chatgpt espera un POST
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': '{{ csrf_token }}'
+            },
+            body: JSON.stringify(requestData)
+        })
+            .then(response => response.json())  // Convierte la respuesta a JSON
+            .then(data => {
+                if (data.error) {
+                    console.error(data.error);
+                    return;
+                }
+
+                // Oculta el indicador de carga y muestra el contenido
+                document.getElementById('loading-indicator').style.display = 'none';
+                document.querySelector('.pregunta-container').style.display = 'block';
+                document.querySelector('.respuestas-container').style.display = 'block';
+
+                // Actualiza el DOM con la nueva pregunta
+                document.getElementById('pregunta-texto').innerText = data.texto_pregunta;
+
+                // Limpia las respuestas anteriores
+                const respuestasContainer = document.getElementById('respuestas-buttons');
+                respuestasContainer.innerHTML = '';
+                console.log(data)
+
+                // Genera los nuevos botones de respuesta
+                data.respuestas.forEach((respuesta, index) => {
+                    const button = document.createElement('button');
+                    button.type = 'button';
+                    button.innerText = respuesta.texto_respuesta;
+                    button.onclick = function () {
+                        seleccionarRespuesta(respuesta);
+                    };
+                    respuestasContainer.appendChild(button);
+                });
+            })
+            .catch(error => {
+                console.error('Error al obtener la pregunta:', error);
+                document.getElementById('loading-indicator').innerText = 'Error al cargar la pregunta. Intenta de nuevo.';
+            });
+    }
 
     // Función para seleccionar una respuesta y almacenarla en cookies
-    function selectAnswer(respuesta) {
-        // Guarda la respuesta seleccionada en el campo oculto
-        document.getElementById('selected_answer').value = respuesta.texto_respuesta;
+    function seleccionarRespuesta(respuesta) {
+        document.getElementById('selected_answer').value = respuesta.texto;
 
-        // Guarda la pregunta y respuesta en formato JSON en una cookie
         const selectedData = {
-            id: pregunta.id,
-            pregunta: pregunta.texto_pregunta,
-            selected_answer: respuesta.texto_respuesta
+            pregunta: document.getElementById('pregunta-texto').innerText,
+            selected_answer: respuesta.texto
         };
+
         setCookie('respuesta_seleccionada', JSON.stringify(selectedData), 3);
     }
 
@@ -103,4 +113,7 @@
         var expires = "expires=" + d.toUTCString();
         document.cookie = cname + "=" + cvalue + ";" + expires + ";path=/";
     }
+
+    // Llama a obtenerPregunta() para cargar la primera pregunta al cargar la página
+    document.addEventListener('DOMContentLoaded', obtenerPregunta);
 </script>
