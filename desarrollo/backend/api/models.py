@@ -45,45 +45,49 @@ class Usuario(AbstractBaseUser, PermissionsMixin):
 
 class Pregunta(models.Model):
     NIVEL_CHOICES = [
-        ('1M', '1º Medio'),
-        ('2M', '2º Medio'),
-        ('3M', '3º Medio'),
-        ('4M', '4º Medio'),
+        ('1ero Medio', '1dro Medio'),
+        ('2do Medio', '2do Medio'),
+        ('3ro Medio', '3ero Medio'),
+        ('4to Medio', '4to Medio'),
     ]
 
     MATERIA_CHOICES = [
-        ('BIO', 'Biología'),
-        ('FIS', 'Física'),
-        ('QUI', 'Química'),
+        ('Biologia', 'Biologia'),
+        ('Fisica', 'Fisica'),
+        ('Quimica', 'Quimica'),
+        ('Matematica','Matematica'),
+        ('Lenguaje','Lenguaje')
     ]
 
     id = models.AutoField(primary_key=True)
     texto_pregunta = models.TextField()
-    nivel = models.CharField(max_length=2, choices=NIVEL_CHOICES)
-    materia = models.CharField(max_length=3, choices=MATERIA_CHOICES)
+    nivel = models.CharField(max_length=10, choices=NIVEL_CHOICES)
+    materia = models.CharField(max_length=10, choices=MATERIA_CHOICES)
 
     def __str__(self):
         return self.texto_pregunta
 
 class Cuestionario(models.Model):
     NIVEL_CHOICES = [
-        ('1M', '1º Medio'),
-        ('2M', '2º Medio'),
-        ('3M', '3º Medio'),
-        ('4M', '4º Medio'),
+        ('1ero Medio', '1dro Medio'),
+        ('2do Medio', '2do Medio'),
+        ('3ro Medio', '3ero Medio'),
+        ('4to Medio', '4to Medio'),
     ]
 
     MATERIA_CHOICES = [
-        ('BIO', 'Biología'),
-        ('FIS', 'Física'),
-        ('QUI', 'Química'),
+        ('Biologia', 'Biologia'),
+        ('Fisica', 'Fisica'),
+        ('Quimica', 'Quimica'),
+        ('Matematica','Matematica'),
+        ('Lenguaje','Lenguaje')
     ]
 
     id = models.AutoField(primary_key=True)
     titulo = models.CharField(max_length=100)
     descripcion = models.TextField()
-    nivel = models.CharField(max_length=2, choices=NIVEL_CHOICES)
-    materia = models.CharField(max_length=3, choices=MATERIA_CHOICES)
+    nivel = models.CharField(max_length=10, choices=NIVEL_CHOICES)
+    materia = models.CharField(max_length=10, choices=MATERIA_CHOICES)
     usuario = models.ForeignKey(Usuario,null=True, blank=True, on_delete=models.CASCADE, related_name='cuestionarios')
     preguntas = models.ManyToManyField(Pregunta, blank=True)
 

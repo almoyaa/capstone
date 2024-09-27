@@ -34,7 +34,6 @@ class PreguntaCreateView(generics.CreateAPIView):
 class PreguntaAllView(generics.ListAPIView):
     queryset = Pregunta.objects.all()
     serializer_class = PreguntaSerializer
-    
 class PreguntaDetailView(generics.RetrieveAPIView):
     queryset = Pregunta.objects.all()
     serializer_class = PreguntaSerializer
