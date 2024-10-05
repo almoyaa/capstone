@@ -1,0 +1,45 @@
+<head></head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+{% load static %}
+<link rel="stylesheet" href="{% static '/css/pregunta.css' %}" />
+<link rel="stylesheet" href="{% static '/css/crear-cuestionario.css' %}" />
+<title>Pregunta</title>
+</head>
+
+{% include "navbar.html" %}
+
+<div>
+
+    <form class="form" action="{% url 'n-preguntas' %}" method="POST" onsubmit="return saveAns()">
+        <h1>Iniciar cuestionario</h1>
+        {% csrf_token %}
+        <select class="form-select" name="cantidad" aria-label="Selecionar cantidad de preguntas">
+            <option selected>Cantidad de preguntas</option>
+            <option value="5">5</option>
+            <option value="10">10</option>
+            <option value="15">15</option>
+            <option value="20">20</option>
+        </select>
+        <select class="form-select" name="materia" aria-label="Seleccionar Materia">
+            <option selected>Materia</option>
+            <option value="Matematica">Matemáticas</option>
+            <option value="Lenguaje">Lenguaje</option>
+            <option value="Historia">Historia</option>
+            <option value="Fisica">Física</option>
+            <option value="Quimica">Química</option>
+            <option value="Biologia">Biología</option>
+        </select>
+        <select class="form-select" name="nivel" aria-label="Seleccionar Materia">
+            <option selected>Curso</option>
+            <option value="1ero Medio">1ero Medio</option>
+            <option value="2do Medio">2do Medio</option>
+            <option value="3ero Medio">3ero Medio</option>
+            <option value="4to Medio">4to Medio</option>
+        </select>
+        <button class="crear-cuestionario-button" id="crear" type="submit">Lets Go!</button>
+
+    </form>
+
+
+</div>

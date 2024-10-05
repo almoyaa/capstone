@@ -10,6 +10,7 @@ from django.conf import settings
 from django.http import JsonResponse
 from dotenv import load_dotenv
 from django.views.generic import TemplateView
+from django.shortcuts import redirect
 load_dotenv()
 
 class UsuarioCreateView(generics.CreateAPIView):
@@ -142,4 +143,120 @@ class IndexTemplateView(TemplateView):
     template_name = "index.html"
 
 class PreguntaTemplateView(TemplateView):
-    template_name="pregunta.html"
+    template_name = "pregunta.html"
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        # Cargar preguntas de la sesión
+        preguntas = self.request.session.get('preguntas_guardadas', [])
+        context['preguntas_json'] = json.dumps(preguntas)  # Convertir a JSON
+        print(context)
+        return context
+
+
+@csrf_exempt
+def n_preguntas_view(request):
+    if request.method == 'POST':
+        try:
+            materia = request.POST.get('materia')
+            nivel = request.POST.get('nivel')
+            cantidad = request.POST.get('cantidad')
+
+            nivel_mapping = {
+                "1ero Medio": "1ero Medio",
+                "2do Medio": "2do Medio",
+                "3ero Medio": "3ero Medio",
+                "4to Medio": "4to Medio"
+            }
+
+            materia_mapping = {
+                "Biologia": "Biologia",
+                "Fisica": "Fisica",
+                "Quimica": "Quimica",
+                "Lenguaje": "Lenguaje",
+                "Matematica": "Matematica",
+                "Historia": "Historia"
+            }
+
+            nivel_clave = nivel_mapping.get(nivel)
+            materia_clave = materia_mapping.get(materia)
+
+            if not nivel_clave or not materia_clave:
+                return JsonResponse({"error": "Materia o nivel inválidos."}, status=400)
+
+            prompt = f"""
+            Genera {cantidad} preguntas de opción múltiple sobre {materia} para un estudiante correspondiende a la materia de estudio de {nivel} de la PAES CHILE 2023 o la más actualizada que tengas. La pregunta debe tener 5 opciones de respuesta, de dificultad alta, y una es la correcta aleatoriamente. Devuélveme el resultado en el siguiente formato JSON:
+            [
+                {{
+                    "pregunta": "Texto de la pregunta",
+                    "opciones": [
+                        {{"texto": "Opción 1", "es_correcta": null}},
+                        {{"texto": "Opción 2", "es_correcta": null}},
+                        {{"texto": "Opción 3", "es_correcta": null}},
+                        {{"texto": "Opción 4", "es_correcta": null}},
+                        {{"texto": "Opción 5", "es_correcta": null}}
+                    ]
+                }},
+                ...
+            ]
+            """
+
+            response = client.chat.completions.create(
+                model="gpt-3.5-turbo",
+                messages=[{"role": "user", "content": prompt}],
+                max_tokens=2000
+            )
+
+            content = response.choices[0].message.content.strip()
+            preguntas_data = json.loads(content)
+
+            preguntas_guardadas = []
+
+            for pregunta_data in preguntas_data:
+                pregunta = Pregunta.objects.create(
+                    texto_pregunta=pregunta_data["pregunta"],
+                    nivel=nivel_clave,
+                    materia=materia_clave
+                )
+
+                for opcion in pregunta_data["opciones"]:
+                    Respuesta.objects.create(
+                        texto_respuesta=opcion["texto"],
+                        es_correcta=opcion["es_correcta"],
+                        pregunta=pregunta
+                    )
+
+                respuestas = [
+                    {
+                        "id": respuesta.id,
+                        "texto_respuesta": respuesta.texto_respuesta,
+                        "es_correcta": respuesta.es_correcta
+                    }
+                    for respuesta in pregunta.respuestas.all()
+                ]
+
+                pregunta_json = {
+                    "id": pregunta.id,
+                    "texto_pregunta": pregunta.texto_pregunta,
+                    "nivel": pregunta.nivel,
+                    "materia": pregunta.materia,
+                    "respuestas": respuestas
+                }
+
+                preguntas_guardadas.append(pregunta_json)
+
+            request.session['preguntas_guardadas'] = preguntas_guardadas
+
+            return redirect('/pregunta/') 
+
+        except json.JSONDecodeError as e:
+            return JsonResponse({"error": "Error al decodificar JSON: " + str(e)}, status=500)
+        except Exception as e:
+            if(str(e)=="'pregunta'"):
+                print('efectivamente error')
+                return n_preguntas_view(request)
+            return JsonResponse({"error": str(e)}, status=500)
+    else:
+        return JsonResponse({"error": "Método de solicitud no permitido."}, status=405)
+class CrearCuestionarioView(TemplateView):
+    template_name="crear-cuestionario.html"

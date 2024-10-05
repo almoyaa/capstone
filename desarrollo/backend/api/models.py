@@ -47,7 +47,7 @@ class Pregunta(models.Model):
     NIVEL_CHOICES = [
         ('1ero Medio', '1dro Medio'),
         ('2do Medio', '2do Medio'),
-        ('3ro Medio', '3ero Medio'),
+        ('3ero Medio', '3ero Medio'),
         ('4to Medio', '4to Medio'),
     ]
 
@@ -71,7 +71,7 @@ class Cuestionario(models.Model):
     NIVEL_CHOICES = [
         ('1ero Medio', '1dro Medio'),
         ('2do Medio', '2do Medio'),
-        ('3ro Medio', '3ero Medio'),
+        ('3ero Medio', '3ero Medio'),
         ('4to Medio', '4to Medio'),
     ]
 
@@ -97,7 +97,7 @@ class Cuestionario(models.Model):
 class Respuesta(models.Model):
     id = models.AutoField(primary_key=True)
     texto_respuesta = models.TextField()
-    es_correcta = models.BooleanField()
+    es_correcta = models.BooleanField(null=True)
     pregunta = models.ForeignKey(Pregunta, related_name='respuestas', on_delete=models.CASCADE)
 
     def __str__(self):
