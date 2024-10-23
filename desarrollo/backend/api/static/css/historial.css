@@ -1,0 +1,15 @@
+.titulo-historial {
+    color: brown;
+    display: flex;
+    justify-content: center;
+    /* Centrado horizontal */
+    height: 100px;
+    font-size: 52px;
+    font-style: italic;
+}
+
+.tabla-historial {
+    border: 1px solid black;
+    display: flex;
+    justify-content: center;
+}
