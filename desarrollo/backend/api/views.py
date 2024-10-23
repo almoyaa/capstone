@@ -55,6 +55,8 @@ class MateriaListView(generics.ListAPIView):
     queryset = Materia.objects.all()
     serializer_class = MateriaSerializer
 
+
+
 client = openai.OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
 
@@ -73,6 +75,9 @@ class PreguntaTemplateView(TemplateView):
         print(context)
         return context
 
+
+class HistorialTemplateView(TemplateView):
+    template_name = "historial.html"
 
 class CrearCuestionarioView(TemplateView):
     template_name="crear-cuestionario.html"
@@ -224,6 +229,7 @@ def crear_pregunta_matematica(request):
                     "tema":pregunta.tema.nombre,
                     "respuestas": respuestas
                 }
+                print(pregunta_json)
 
                 preguntas_guardadas.append(pregunta_json)
 

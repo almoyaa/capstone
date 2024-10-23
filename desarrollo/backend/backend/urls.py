@@ -1,6 +1,6 @@
 from django.contrib import admin
 from django.urls import path, include
-from api.views import IndexTemplateView, PreguntaTemplateView, CrearCuestionarioView
+from api.views import IndexTemplateView, PreguntaTemplateView, CrearCuestionarioView, HistorialTemplateView
 
 urlpatterns = [
     path('admin/', admin.site.urls),
@@ -8,4 +8,5 @@ urlpatterns = [
     path('', IndexTemplateView.as_view(),name='index-page'),
     path('pregunta/', PreguntaTemplateView.as_view(), name='mostrar-pregunta'),
     path('crear-cuestionario/', CrearCuestionarioView.as_view(), name='crear-cuestionario'),
+    path('historial/', HistorialTemplateView.as_view(), name='historial-page')
 ]
