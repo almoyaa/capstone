@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import Usuario, Cuestionario, Pregunta, Respuesta
+from .models import Usuario, Cuestionario, Pregunta, Respuesta, Materia, Tema, Conocimiento
 
 class UsuarioSerializer(serializers.ModelSerializer):
     class Meta:
@@ -43,3 +43,21 @@ class CuestionarioSerializer(serializers.ModelSerializer):
         cuestionario = Cuestionario.objects.create(**validated_data)
         cuestionario.preguntas.set(preguntas_data)  # Añade las preguntas al cuestionario
         return cuestionario
+    
+class ConocimientoSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Conocimiento
+        fields = ['nombre','descripcion']  # Solo mostrar el nombre
+        
+class TemaSerializer(serializers.ModelSerializer):
+    conocimiento = serializers.StringRelatedField(many=True)
+    #conocimiento = ConocimientoSerializer(many=True) 
+    class Meta:
+        model = Tema
+        fields = ['id', 'nombre', 'conocimiento']
+        
+class MateriaSerializer(serializers.ModelSerializer):
+    tema = TemaSerializer(many=True)
+    class Meta:
+        model = Materia
+        fields = ['id', 'nombre','tema']

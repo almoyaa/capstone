@@ -43,27 +43,41 @@ class Usuario(AbstractBaseUser, PermissionsMixin):
     def __str__(self):
         return self.email
 
+class Conocimiento(models.Model):
+    id = models.AutoField(primary_key=True)
+    nombre = models.CharField(max_length=255,blank=True, null=True)
+    descripcion = models.TextField(blank=True, null=True)
+    
+    def __str__(self):
+        return self.nombre
+    
+    
+class Tema(models.Model):
+    id = models.AutoField(primary_key=True)
+    nombre = models.CharField(max_length=255,blank=True, null=True)
+    conocimiento = models.ManyToManyField("Conocimiento", verbose_name=("Conocimientos"))
+    
+    def __str__(self):
+        return self.nombre
+    
+    def mostrar_conocimientos(self):
+        return " - ".join([c.nombre for c in self.conocimiento.all()])
+    
+    
+class Materia(models.Model):
+    id = models.AutoField(primary_key=True)
+    nombre = models.CharField(max_length=100,blank=True, null=True)
+    tema =models.ManyToManyField("Tema", verbose_name=("Temas"))
+    
+    def __str__(self):
+        return self.nombre
+    
+
 class Pregunta(models.Model):
-    NIVEL_CHOICES = [
-        ('1ero Medio', '1dro Medio'),
-        ('2do Medio', '2do Medio'),
-        ('3ero Medio', '3ero Medio'),
-        ('4to Medio', '4to Medio'),
-    ]
-
-    MATERIA_CHOICES = [
-        ('Biologia', 'Biologia'),
-        ('Fisica', 'Fisica'),
-        ('Quimica', 'Quimica'),
-        ('Matematica','Matematica'),
-        ('Lenguaje','Lenguaje')
-    ]
-
     id = models.AutoField(primary_key=True)
     texto_pregunta = models.TextField()
-    nivel = models.CharField(max_length=10, choices=NIVEL_CHOICES)
-    materia = models.CharField(max_length=10, choices=MATERIA_CHOICES)
-
+    materia = models.ForeignKey('Materia', related_name='Materia', on_delete=models.CASCADE)
+    tema = models.ForeignKey("Tema", verbose_name='Tema', on_delete=models.CASCADE, null=True)
     def __str__(self):
         return self.texto_pregunta
 
@@ -80,7 +94,8 @@ class Cuestionario(models.Model):
         ('Fisica', 'Fisica'),
         ('Quimica', 'Quimica'),
         ('Matematica','Matematica'),
-        ('Lenguaje','Lenguaje')
+        ('Lenguaje','Lenguaje'),
+        ('Historia','Historia')
     ]
 
     id = models.AutoField(primary_key=True)

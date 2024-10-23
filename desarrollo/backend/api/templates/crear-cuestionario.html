@@ -11,7 +11,7 @@
 
 <div>
 
-    <form class="form" action="{% url 'n-preguntas' %}" method="POST" onsubmit="return saveAns()">
+    <form class="form" action="{% url 'preguntas-matematicas' %}" method="POST" onsubmit="return saveAns()">
         <h1>Iniciar cuestionario</h1>
         {% csrf_token %}
         <select class="form-select" name="cantidad" aria-label="Selecionar cantidad de preguntas">
@@ -23,19 +23,13 @@
         </select>
         <select class="form-select" name="materia" aria-label="Seleccionar Materia">
             <option selected>Materia</option>
-            <option value="Matematica">Matemáticas</option>
+            <option value="Matemática M1">Matemática M1</option>
+            <option value="Matemática M2">Matemática M2</option>
             <option value="Lenguaje">Lenguaje</option>
             <option value="Historia">Historia</option>
             <option value="Fisica">Física</option>
             <option value="Quimica">Química</option>
             <option value="Biologia">Biología</option>
-        </select>
-        <select class="form-select" name="nivel" aria-label="Seleccionar Materia">
-            <option selected>Curso</option>
-            <option value="1ero Medio">1ero Medio</option>
-            <option value="2do Medio">2do Medio</option>
-            <option value="3ero Medio">3ero Medio</option>
-            <option value="4to Medio">4to Medio</option>
         </select>
         <button class="crear-cuestionario-button" id="crear" type="submit">Iniciar cuestionario</button>
 

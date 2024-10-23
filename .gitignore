@@ -1,4 +1,6 @@
 /desarrollo/venv
-/desarrollo/backend/backend/__pycache__/
+/desarrollo/backend/backend/__pycache__
 /desarrollo/.env
-/desarrollo/backend/api/__pychache__/
+/desarrollo/backend/api/migrations/__pycache__
+/desarrollo/backend/api/__pycache__
+/desarrollo/backend/db.sqlite3

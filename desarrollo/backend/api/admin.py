@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Usuario, Cuestionario, Pregunta, Respuesta, Resultado
+from .models import Usuario, Cuestionario, Pregunta, Respuesta, Resultado, Materia, Tema, Conocimiento
 
 class CuestionarioInline(admin.TabularInline):
     model = Cuestionario
@@ -14,8 +14,15 @@ class CuestionarioAdmin(admin.ModelAdmin):
     list_filter = ('usuario', 'nivel', 'materia')  # Filtros para la lista de cuestionarios
 
 class PreguntaAdmin(admin.ModelAdmin):
-    list_display = ('texto_pregunta', 'nivel', 'materia')
-    list_filter = ('nivel', 'materia')
+    list_display = ('texto_pregunta','materia')
+
+class MateriaAdmin(admin.ModelAdmin):
+    list_display = ('id','nombre')
+class TemaAdmin(admin.ModelAdmin):
+    list_display = ('id','nombre','mostrar_conocimientos')
+
+class ConocimientoAdmin(admin.ModelAdmin):
+    list_display = ('nombre','id')
 
 class RespuestaAdmin(admin.ModelAdmin):
     list_display = ('texto_respuesta', 'es_correcta', 'pregunta')
@@ -36,3 +43,6 @@ admin.site.register(Cuestionario, CuestionarioAdmin)
 admin.site.register(Pregunta, PreguntaAdmin)
 admin.site.register(Respuesta, RespuestaAdmin)
 admin.site.register(Resultado, ResultadoAdmin)
+admin.site.register(Materia, MateriaAdmin)
+admin.site.register(Tema, TemaAdmin)
+admin.site.register(Conocimiento, ConocimientoAdmin)
