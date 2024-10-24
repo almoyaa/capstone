@@ -30,65 +30,30 @@
             <button id="siguiente" type="button" onclick="obtenerSiguientePregunta()">Siguiente</button>
         </div>
 
-        <div id="loading-indicator" style="display:none;">
-            <p>Cargando pregunta...</p>
-        </div>
     </div>
 
     <script>
         // Cargar preguntas desde el contexto de Django
-        let preguntasGuardadas = JSON.parse('{{ preguntas_json|escapejs }}');
-        console.log(preguntasGuardadas);
+        let preguntasGuardadas = JSON.parse('{{ preguntas_json|escapejs }}');  // Aquí cargamos las preguntas del contexto
+        console.log(preguntasGuardadas);  // Para depuración
+    
         let preguntaActualIndex = 0;
-
-        // Establecer la cookie
-        const d = new Date();
-        d.setTime(d.getTime() + (1 * 24 * 60 * 60 * 1000)); // 1 día de expiración
-        const expires = "expires=" + d.toUTCString();
-        document.cookie = 'preguntas_guardadas=' + JSON.stringify(preguntasGuardadas) + ";" + expires + ";path=/";
-
-        // Cargar preguntas desde las cookies
-        function cargarPreguntasDesdeCookies() {
-            const preguntasCookie = getCookie('preguntas_guardadas');
-            if (preguntasCookie) {
-                preguntasGuardadas = JSON.parse(preguntasCookie);
-                console.log(preguntasGuardadas.length);  // Verifica si se están analizando las preguntas correctamente
-                if (preguntasGuardadas.length > 0) {
-                    mostrarPregunta(preguntaActualIndex);
-                } else {
-                    console.error('No hay preguntas disponibles para mostrar.');
-                }
-            } else {
-                console.error('No hay preguntas guardadas en las cookies.');
-            }
-        }
-
+    
         // Mostrar pregunta por índice
         function mostrarPregunta(index) {
             const pregunta = preguntasGuardadas[index];
             if (index >= 0 && index < preguntasGuardadas.length) {
                 document.getElementById('pregunta-texto').innerText = pregunta.texto_pregunta;
-
+    
                 // Mostrar las respuestas
                 const respuestasContainer = document.getElementById('respuestas-buttons');
                 respuestasContainer.innerHTML = '';  // Limpiar respuestas anteriores
-
-                // Cargar respuestas desde las cookies
-                const respuestasSeleccionadas = getCookie('respuestas_seleccionadas') ? JSON.parse(getCookie('respuestas_seleccionadas')) : [];
-                const respuestaActual = respuestasSeleccionadas.find(r => r.pregunta === pregunta.texto_pregunta);
-
+    
                 pregunta.respuestas.forEach((respuesta) => {
                     const button = document.createElement('button');
                     button.type = 'button';
                     button.innerText = respuesta.texto_respuesta;
                     button.classList.add('respuesta-boton');  // Añadir clase para estilos
-
-                    // Verificar si la respuesta actual está seleccionada
-                    if (respuestaActual && respuestaActual.selected_answer === respuesta.texto_respuesta) {
-                        button.style.backgroundColor = 'white'; // Cambiar fondo del botón seleccionado
-                        button.style.border = '1px solid black'; // Cambiar borde del botón seleccionado
-                    }
-
                     button.onclick = function () {
                         seleccionarRespuesta(respuesta, pregunta, button);
                     };
@@ -96,7 +61,24 @@
                 });
             }
         }
-
+    
+        // Función para seleccionar una respuesta
+        function seleccionarRespuesta(respuesta, pregunta, button) {
+            document.getElementById('selected_answer').value = respuesta.texto_respuesta;
+    
+            // Cambiar estilo del botón seleccionado
+            const botones = document.querySelectorAll('.respuesta-boton');
+            botones.forEach(btn => {
+                btn.style.backgroundColor = ''; // Limpiar fondo de todos los botones
+                btn.style.border = ''; // Limpiar borde de todos los botones
+            });
+    
+            // Aplicar estilo solo al botón seleccionado
+            button.style.backgroundColor = 'white'; // Cambiar fondo del botón seleccionado
+            button.style.border = '1px solid black'; // Cambiar borde del botón seleccionado
+            button.style.color = 'black'; // Cambiar color del texto
+        }
+    
         // Función para obtener la siguiente pregunta
         function obtenerSiguientePregunta() {
             if (preguntaActualIndex < preguntasGuardadas.length - 1) {
@@ -107,7 +89,7 @@
                 window.location.href = '{% url "index-page" %}'; // Cambia "tu_url_django" por tu URL definida en Django
             }
         }
-
+    
         // Función para obtener la pregunta anterior
         function obtenerPreguntaAnterior() {
             if (preguntaActualIndex > 0) {
@@ -117,67 +99,13 @@
                 alert('Ya estás en la primera pregunta.');
             }
         }
-
-        // Función para seleccionar una respuesta
-        function seleccionarRespuesta(respuesta, pregunta, button) {
-            document.getElementById('selected_answer').value = respuesta.texto_respuesta;
-
-            // Cambiar estilo del botón seleccionado
-            const botones = document.querySelectorAll('.respuesta-boton');
-            botones.forEach(btn => {
-                btn.style.backgroundColor = ''; // Limpiar fondo de todos los botones
-                btn.style.border = ''; // Limpiar borde de todos los botones
-            });
-
-            // Aplicar estilo solo al botón seleccionado
-            button.style.backgroundColor = 'white'; // Cambiar fondo del botón seleccionado
-            button.style.border = '1px solid black'; // Cambiar borde del botón seleccionado
-            button.style.color = 'black'; // Cambiar color del texto
-
-            // Guardar la respuesta seleccionada en cookies
-            const selectedData = {
-                pregunta: pregunta.texto_pregunta,
-                selected_answer: respuesta.texto_respuesta
-            };
-
-            // Obtener respuestas anteriores de la cookie, si existen
-            let respuestasGuardadas = getCookie('respuestas_seleccionadas') ? JSON.parse(getCookie('respuestas_seleccionadas')) : [];
-
-            // Verificar si ya hay una respuesta para esta pregunta
-            const preguntaExistente = respuestasGuardadas.find(r => r.pregunta === pregunta.texto_pregunta);
-            if (preguntaExistente) {
-                // Actualizar la respuesta
-                preguntaExistente.selected_answer = respuesta.texto_respuesta;
-            } else {
-                // Agregar nueva respuesta
-                respuestasGuardadas.push(selectedData);
-            }
-            setCookie('respuestas_seleccionadas', JSON.stringify(respuestasGuardadas), 1);
-        }
-
-        // Función para establecer una cookie
-        function setCookie(name, value, days) {
-            const d = new Date();
-            d.setTime(d.getTime() + (days * 24 * 60 * 60 * 1000));
-            const expires = "expires=" + d.toUTCString();
-            document.cookie = name + "=" + value + ";" + expires + ";path=/";
-        }
-
-        // Función para obtener el valor de una cookie
-        function getCookie(name) {
-            const nameEQ = name + "=";
-            const ca = document.cookie.split(';');
-            for (let i = 0; i < ca.length; i++) {
-                let c = ca[i];
-                while (c.charAt(0) === ' ') c = c.substring(1, c.length);
-                if (c.indexOf(nameEQ) === 0) return c.substring(nameEQ.length, c.length);
-            }
-            return null;
-        }
-
-        // Cargar las preguntas guardadas en cookies al cargar la página
-        window.onload = cargarPreguntasDesdeCookies;
+    
+        // Cargar la primera pregunta cuando la página cargue
+        window.onload = function () {
+            mostrarPregunta(preguntaActualIndex);
+        };
     </script>
+    
 </body>
 
 </html>

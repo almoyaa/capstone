@@ -11,6 +11,7 @@ from django.http import JsonResponse
 from dotenv import load_dotenv
 from django.views.generic import TemplateView
 from django.shortcuts import redirect
+from django.utils.safestring import mark_safe
 
 from langchain_openai import OpenAIEmbeddings
 from langchain.text_splitter import RecursiveCharacterTextSplitter
@@ -229,14 +230,14 @@ def crear_pregunta_matematica(request):
                     "tema":pregunta.tema.nombre,
                     "respuestas": respuestas
                 }
-                print(pregunta_json)
+                print( )
 
                 preguntas_guardadas.append(pregunta_json)
 
             # Guardar las preguntas en la sesión
             request.session['preguntas_guardadas'] = preguntas_guardadas
 
-            return redirect('/pregunta/') 
+            return render(request, 'pregunta.html', {'preguntas_json': mark_safe(json.dumps(preguntas_guardadas))})
 
         except Exception as e:
             return JsonResponse({"error": str(e)}, status=500)
