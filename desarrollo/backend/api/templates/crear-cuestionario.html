@@ -15,14 +15,14 @@
         <h1>Iniciar cuestionario</h1>
         {% csrf_token %}
         <select class="form-select" name="cantidad" aria-label="Selecionar cantidad de preguntas">
-            <option selected>Cantidad de preguntas</option>
+            <option value="" disabled selected hidden>Cantidad de preguntas</option>
             <option value="5">5</option>
             <option value="10">10</option>
             <option value="15">15</option>
             <option value="20">20</option>
         </select>
         <select class="form-select" name="materia" aria-label="Seleccionar Materia">
-            <option selected>Materia</option>
+            <option value="" disabled selected hidden>Materia</option>
             <option value="Matemática M1">Matemática M1</option>
             <option value="Matemática M2">Matemática M2</option>
             <option value="Lenguaje">Lenguaje</option>
@@ -30,6 +30,7 @@
             <option value="Fisica">Física</option>
             <option value="Quimica">Química</option>
             <option value="Biologia">Biología</option>
+            <option value="Tecnico Profesional">Técnico Profesional</option>
         </select>
         <button class="crear-cuestionario-button" id="crear" type="submit">Iniciar cuestionario</button>
 
