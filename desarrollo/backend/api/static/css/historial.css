@@ -6,10 +6,10 @@
     height: 100px;
     font-size: 52px;
     font-style: italic;
-}
-
-.tabla-historial {
+  }
+  
+  .tabla-historial {
     border: 1px solid black;
     display: flex;
     justify-content: center;
-}
+  }
