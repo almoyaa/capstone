@@ -22,6 +22,7 @@
             <option value="20">20</option>
         </select>
         <select class="form-select" name="materia" aria-label="Seleccionar Materia">
+            <option value="" disabled selected hidden>Materias</option>
             {% for materia in materias %}
             <option value="{{materia}}">{{materia}}</option>
             {% endfor %}
