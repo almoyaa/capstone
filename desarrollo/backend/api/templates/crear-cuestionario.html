@@ -22,14 +22,9 @@
             <option value="20">20</option>
         </select>
         <select class="form-select" name="materia" aria-label="Seleccionar Materia">
-            <option selected>Materia</option>
-            <option value="Matemática M1">Matemática M1</option>
-            <option value="Matemática M2">Matemática M2</option>
-            <option value="Lenguaje">Lenguaje</option>
-            <option value="Historia">Historia</option>
-            <option value="Fisica">Física</option>
-            <option value="Quimica">Química</option>
-            <option value="Biologia">Biología</option>
+            {% for materia in materias %}
+            <option value="{{materia}}">{{materia}}</option>
+            {% endfor %}
         </select>
         <button class="crear-cuestionario-button" id="crear" type="submit">Iniciar cuestionario</button>
 

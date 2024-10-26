@@ -27,28 +27,30 @@
 
         <div class="botones-container">
             <button id="atras" type="button" onclick="obtenerPreguntaAnterior()">Atrás</button>
+            <p id="numero-pregunta"></p> 
             <button id="siguiente" type="button" onclick="obtenerSiguientePregunta()">Siguiente</button>
         </div>
-
     </div>
 
     <script>
         // Cargar preguntas desde el contexto de Django
         let preguntasGuardadas = JSON.parse('{{ preguntas_json|escapejs }}');  // Aquí cargamos las preguntas del contexto
         console.log(preguntasGuardadas);  // Para depuración
-    
+
         let preguntaActualIndex = 0;
-    
+        let respuestasUsuario = [];  // Array para almacenar las respuestas del usuario
+
         // Mostrar pregunta por índice
         function mostrarPregunta(index) {
             const pregunta = preguntasGuardadas[index];
             if (index >= 0 && index < preguntasGuardadas.length) {
                 document.getElementById('pregunta-texto').innerText = pregunta.texto_pregunta;
-    
+                document.getElementById('numero-pregunta').innerText = `Pregunta ${index + 1} de ${preguntasGuardadas.length}`;  // Actualiza el texto del número de pregunta
+
                 // Mostrar las respuestas
                 const respuestasContainer = document.getElementById('respuestas-buttons');
                 respuestasContainer.innerHTML = '';  // Limpiar respuestas anteriores
-    
+
                 pregunta.respuestas.forEach((respuesta) => {
                     const button = document.createElement('button');
                     button.type = 'button';
@@ -61,35 +63,43 @@
                 });
             }
         }
-    
+
         // Función para seleccionar una respuesta
         function seleccionarRespuesta(respuesta, pregunta, button) {
             document.getElementById('selected_answer').value = respuesta.texto_respuesta;
-    
+
+            // Guardar la respuesta seleccionada en el array
+            respuestasUsuario[preguntaActualIndex] = {
+                pregunta: pregunta.texto_pregunta,
+                respuestaSeleccionada: respuesta.texto_respuesta,
+                esCorrecta: respuesta.es_correcta  // Asegúrate de que 'respuesta' tenga la propiedad 'es_correcta'
+            };
+
             // Cambiar estilo del botón seleccionado
             const botones = document.querySelectorAll('.respuesta-boton');
             botones.forEach(btn => {
                 btn.style.backgroundColor = ''; // Limpiar fondo de todos los botones
                 btn.style.border = ''; // Limpiar borde de todos los botones
             });
-    
+
             // Aplicar estilo solo al botón seleccionado
             button.style.backgroundColor = 'white'; // Cambiar fondo del botón seleccionado
             button.style.border = '1px solid black'; // Cambiar borde del botón seleccionado
             button.style.color = 'black'; // Cambiar color del texto
         }
-    
+
         // Función para obtener la siguiente pregunta
         function obtenerSiguientePregunta() {
             if (preguntaActualIndex < preguntasGuardadas.length - 1) {
                 preguntaActualIndex++;
                 mostrarPregunta(preguntaActualIndex);
             } else {
-                // Redirigir a otra URL al finalizar todas las preguntas
+                // Mostrar resultados al finalizar todas las preguntas
+                mostrarResultados();
                 window.location.href = '{% url "index-page" %}'; // Cambia "tu_url_django" por tu URL definida en Django
             }
         }
-    
+
         // Función para obtener la pregunta anterior
         function obtenerPreguntaAnterior() {
             if (preguntaActualIndex > 0) {
@@ -99,13 +109,29 @@
                 alert('Ya estás en la primera pregunta.');
             }
         }
-    
+
+        // Función para mostrar los resultados
+        function mostrarResultados() {
+            let correctas = 0;
+            let incorrectas = 0;
+
+            respuestasUsuario.forEach(respuesta => {
+                if (respuesta.esCorrecta) {
+                    correctas++;
+                } else {
+                    incorrectas++;
+                }
+            });
+
+            alert(`Resultados: ${correctas} correctas, ${incorrectas} incorrectas.`);
+        }
+
         // Cargar la primera pregunta cuando la página cargue
         window.onload = function () {
             mostrarPregunta(preguntaActualIndex);
         };
     </script>
-    
+
 </body>
 
 </html>

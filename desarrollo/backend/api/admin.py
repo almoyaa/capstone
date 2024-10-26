@@ -10,8 +10,8 @@ class UsuarioAdmin(admin.ModelAdmin):
     inlines = [CuestionarioInline]  # Añade la vista inline para cuestionarios
 
 class CuestionarioAdmin(admin.ModelAdmin):
-    list_display = ('titulo', 'descripcion', 'nivel', 'materia', 'usuario')
-    list_filter = ('usuario', 'nivel', 'materia')  # Filtros para la lista de cuestionarios
+    list_display = ('titulo', 'descripcion','materia', 'usuario')
+    list_filter = ('usuario', 'materia')  # Filtros para la lista de cuestionarios
 
 class PreguntaAdmin(admin.ModelAdmin):
     list_display = ('texto_pregunta','materia')

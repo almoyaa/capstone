@@ -78,32 +78,17 @@ class Pregunta(models.Model):
     texto_pregunta = models.TextField()
     materia = models.ForeignKey('Materia', related_name='Materia', on_delete=models.CASCADE)
     tema = models.ForeignKey("Tema", verbose_name='Tema', on_delete=models.CASCADE, null=True)
+    sub_tema = models.CharField(max_length=255,blank=True, null=True)
     def __str__(self):
         return self.texto_pregunta
 
 class Cuestionario(models.Model):
-    NIVEL_CHOICES = [
-        ('1ero Medio', '1dro Medio'),
-        ('2do Medio', '2do Medio'),
-        ('3ero Medio', '3ero Medio'),
-        ('4to Medio', '4to Medio'),
-    ]
-
-    MATERIA_CHOICES = [
-        ('Biologia', 'Biologia'),
-        ('Fisica', 'Fisica'),
-        ('Quimica', 'Quimica'),
-        ('Matematica','Matematica'),
-        ('Lenguaje','Lenguaje'),
-        ('Historia','Historia')
-    ]
 
     id = models.AutoField(primary_key=True)
     titulo = models.CharField(max_length=100)
     descripcion = models.TextField()
-    nivel = models.CharField(max_length=10, choices=NIVEL_CHOICES)
-    materia = models.CharField(max_length=10, choices=MATERIA_CHOICES)
-    usuario = models.ForeignKey(Usuario,null=True, blank=True, on_delete=models.CASCADE, related_name='cuestionarios')
+    materia = models.ForeignKey(Materia,null=True, blank=True, on_delete=models.CASCADE, related_name='materia')
+    usuario = models.ForeignKey(Usuario,null=True, blank=True, on_delete=models.CASCADE, related_name='usuario')
     preguntas = models.ManyToManyField(Pregunta, blank=True)
 
     def __str__(self):
