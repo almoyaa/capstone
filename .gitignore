@@ -4,3 +4,5 @@
 /desarrollo/backend/api/migrations/__pycache__
 /desarrollo/backend/api/__pycache__
 /desarrollo/backend/db.sqlite3
+/desarrollo/backend/api/__pycache__
+/desarrollo/backend/.env
