@@ -1,6 +1,7 @@
 import os
 import json
 import openai
+import time
 from django.shortcuts import render
 from rest_framework import generics
 from .models import Usuario, Cuestionario, Pregunta, Respuesta, Materia, Tema, Conocimiento
@@ -134,8 +135,9 @@ def cargar_pdfs_desde_carpeta(carpeta, embeddings_model):
 
 
 
+#POST PARA CREAR PREGUNTAS
 @csrf_exempt
-def crear_pregunta_matematica(request):
+def crear_preguntas(request):
     if request.method == 'POST':
         print(request.POST)
         try:
@@ -156,10 +158,6 @@ def crear_pregunta_matematica(request):
             embeddings = OpenAIEmbeddings(model="text-embedding-3-small")
             retriever = cargar_pdfs_desde_carpeta(carpeta_pdfs, embeddings)
             temarios = ', '.join([tema.nombre for tema in temas])
-            print(materia)
-            print(temarios)
-            print("=================")
-            
 
             # Definir el prompt
             prompt = ChatPromptTemplate.from_messages(
@@ -198,11 +196,14 @@ def crear_pregunta_matematica(request):
             )
 
             tools = [retriever_tool]
-            model = ChatOpenAI(temperature=0.3, model="gpt-4o", seed=211)
+            seed = int(time.time())
+            model = ChatOpenAI(temperature=0, model="gpt-4o", seed=seed)
             agent = create_openai_tools_agent(model, tools, prompt)
             agent_executor = AgentExecutor(agent=agent, tools=tools, verbose=True)
             print("asdsadl;asjdlkaskdjas")
             # Ejecutar la consulta
+
+            
             response = agent_executor.invoke({"input": f"Dame {cantidad} preguntas en formato json de los siguientes temarios: {temarios}, solo json, nada más, SOLO JSON"})
             
             output_text = response.get("output", "")
@@ -213,14 +214,10 @@ def crear_pregunta_matematica(request):
 
 
             preguntas_guardadas = []
-            print(preguntas_data)
-            print(materia)
+
             materia_nombre = materia.nombre
 
             for pregunta_data in preguntas_data:
-                print('oooooo')
-                print(materia.nombre)
-                print(pregunta_data)
 
                 if(materia_nombre=='Física' or materia_nombre=='Química' or materia_nombre == 'Biología'):
                     print("ifififif")

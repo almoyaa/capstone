@@ -17,9 +17,11 @@ class PreguntaAdmin(admin.ModelAdmin):
     list_display = ('texto_pregunta','materia')
 
 class MateriaAdmin(admin.ModelAdmin):
+
     list_display = ('id','nombre')
 class TemaAdmin(admin.ModelAdmin):
     list_display = ('id','nombre','mostrar_conocimientos')
+    list_filter = ['nombre']
 
 class ConocimientoAdmin(admin.ModelAdmin):
     list_display = ('nombre','id')

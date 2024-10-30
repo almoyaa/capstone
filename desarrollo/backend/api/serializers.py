@@ -32,11 +32,10 @@ class PreguntaSerializer(serializers.ModelSerializer):
         fields = ['id', 'texto_pregunta', 'nivel', 'materia','respuestas']
 
 class CuestionarioSerializer(serializers.ModelSerializer):
-    preguntas = serializers.PrimaryKeyRelatedField(queryset=Pregunta.objects.all(), many=True, required=False)
 
     class Meta:
         model = Cuestionario
-        fields = ['id', 'titulo', 'descripcion', 'nivel', 'materia', 'preguntas']
+        fields = ['id', 'titulo', 'descripcion','materia']
 
     def create(self, validated_data):
         preguntas_data = validated_data.pop('preguntas', [])

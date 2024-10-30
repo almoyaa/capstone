@@ -12,6 +12,8 @@
 desarrollo/.env
 desarrollo/backend/.env
 
+.env
+
 # Ignorar archivos de migración y bases de datos
 /desarrollo/backend/api/migrations/
 /desarrollo/backend/db.sqlite3

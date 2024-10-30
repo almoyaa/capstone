@@ -96,7 +96,8 @@
             } else {
                 // Mostrar resultados al finalizar todas las preguntas
                 mostrarResultados();
-                window.location.href = '{% url "index-page" %}'; // Cambia "tu_url_django" por tu URL definida en Django
+                //CREAR CUESTIONARIO CON USUARIO Y RESPUESTAS CORRESPNDIENTES.
+                crearCuestionario();
             }
         }
 
@@ -125,6 +126,33 @@
 
             alert(`Resultados: ${correctas} correctas, ${incorrectas} incorrectas.`);
         }
+        function crearCuestionario() {
+        fetch("{% url 'crear-cuestionario' %}", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "X-CSRFToken": "{{ csrf_token }}"
+            },
+            body: JSON.stringify({
+                titulo: `Cuestionario de ${preguntasGuardadas[0].materia}`,
+                descripcion: `Cuestionario generado para los temas de ${preguntasGuardadas[0].materia}`,
+                materia: preguntasGuardadas[0].materia,
+                respuestas: respuestasUsuario  // Enviar las respuestas del usuario
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert("Cuestionario guardado exitosamente.");
+                window.location.href = '{% url "index-page" %}';  // Redirigir a la página principal
+            } else {
+                alert("Hubo un error al guardar el cuestionario.");
+            }
+        })
+        .catch(error => {
+            console.error("Error al crear el cuestionario:", error);
+        });
+    }
 
         // Cargar la primera pregunta cuando la página cargue
         window.onload = function () {

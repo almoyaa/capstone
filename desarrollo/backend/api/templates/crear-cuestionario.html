@@ -11,7 +11,7 @@
 
 <div>
 
-    <form class="form" action="{% url 'preguntas-matematicas' %}" method="POST" onsubmit="return saveAns()">
+    <form class="form" action="{% url 'crear-preguntas' %}" method="POST" onsubmit="return saveAns()">
         <h1>Iniciar cuestionario</h1>
         {% csrf_token %}
         <select class="form-select" name="cantidad" aria-label="Selecionar cantidad de preguntas">

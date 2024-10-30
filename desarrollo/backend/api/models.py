@@ -78,17 +78,17 @@ class Pregunta(models.Model):
     texto_pregunta = models.TextField()
     materia = models.ForeignKey('Materia', related_name='Materia', on_delete=models.CASCADE)
     tema = models.ForeignKey("Tema", verbose_name='Tema', on_delete=models.CASCADE, null=True)
-    sub_tema = models.CharField(max_length=255,blank=True, null=True)
     def __str__(self):
         return self.texto_pregunta
 
 class Cuestionario(models.Model):
 
+
     id = models.AutoField(primary_key=True)
     titulo = models.CharField(max_length=100)
     descripcion = models.TextField()
-    materia = models.ForeignKey(Materia,null=True, blank=True, on_delete=models.CASCADE, related_name='materia')
-    usuario = models.ForeignKey(Usuario,null=True, blank=True, on_delete=models.CASCADE, related_name='usuario')
+    materia = models.CharField(max_length=100,null=True, blank=True)
+    usuario = models.ForeignKey(Usuario,null=True, blank=True, on_delete=models.CASCADE, related_name='cuestionarios')
     preguntas = models.ManyToManyField(Pregunta, blank=True)
 
     def __str__(self):
