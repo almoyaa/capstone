@@ -58,6 +58,14 @@ class MateriaListView(generics.ListAPIView):
     queryset = Materia.objects.all()
     serializer_class = MateriaSerializer
 
+class CuestionarioListView(generics.ListAPIView):
+    serializer_class = CuestionarioSerializer
+
+    def get_queryset(self):
+        # Obtener el usuario a través de un parámetro en la URL
+        usuario_id = self.kwargs.get('usuario_id')  # Asegúrate de que 'usuario_id' sea el parámetro en tu URL
+        return Cuestionario.objects.filter(usuario_id=usuario_id)
+
 
 
 client = openai.OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
@@ -242,8 +250,7 @@ def crear_preguntas(request):
                 pregunta = Pregunta.objects.create(
                     texto_pregunta=pregunta_data["pregunta"],
                     materia=materia,
-                    tema=tema,
-                    sub_tema=''
+                    tema=tema
                 )
 
                 # Crear las opciones de respuesta
@@ -287,3 +294,7 @@ def crear_preguntas(request):
             return JsonResponse({"error": str(e)}, status=500)
     else:
         return JsonResponse({"error": "Método de solicitud no permitido."}, status=405)
+
+
+
+

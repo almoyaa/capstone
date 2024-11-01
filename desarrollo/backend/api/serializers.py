@@ -29,13 +29,14 @@ class PreguntaSerializer(serializers.ModelSerializer):
     respuestas = RespuestaSerializer(many=True, read_only=True)
     class Meta:
         model = Pregunta
-        fields = ['id', 'texto_pregunta', 'nivel', 'materia','respuestas']
+        fields = ['id', 'texto_pregunta', 'materia','respuestas']
 
 class CuestionarioSerializer(serializers.ModelSerializer):
-
+    preguntas = PreguntaSerializer(many=True)
     class Meta:
         model = Cuestionario
-        fields = ['id', 'titulo', 'descripcion','materia']
+
+        fields = ['id', 'titulo', 'descripcion','materia','preguntas']
 
     def create(self, validated_data):
         preguntas_data = validated_data.pop('preguntas', [])

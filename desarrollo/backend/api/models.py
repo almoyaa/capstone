@@ -90,6 +90,7 @@ class Cuestionario(models.Model):
     materia = models.CharField(max_length=100,null=True, blank=True)
     usuario = models.ForeignKey(Usuario,null=True, blank=True, on_delete=models.CASCADE, related_name='cuestionarios')
     preguntas = models.ManyToManyField(Pregunta, blank=True)
+    preguntas_correctas = models.IntegerField(null=True, blank=True)
 
     def __str__(self):
         return self.titulo
