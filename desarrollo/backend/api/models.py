@@ -82,8 +82,6 @@ class Pregunta(models.Model):
         return self.texto_pregunta
 
 class Cuestionario(models.Model):
-
-
     id = models.AutoField(primary_key=True)
     titulo = models.CharField(max_length=100)
     descripcion = models.TextField()
