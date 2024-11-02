@@ -46,11 +46,11 @@ class PreguntaSerializer(serializers.ModelSerializer):
 
 class CuestionarioSerializer(serializers.ModelSerializer):
     preguntas = PreguntaSerializer(many=True, read_only=True)  # Añadimos read_only=True
-    materia = serializers.StringRelatedField()  # Para mostrar el nombre de la materia
     
     class Meta:
         model = Cuestionario
         fields = ['id', 'titulo', 'descripcion', 'materia', 'preguntas', 'preguntas_correctas']
+        
     
 class ConocimientoSerializer(serializers.ModelSerializer):
     class Meta:

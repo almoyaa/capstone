@@ -4,6 +4,8 @@ import openai
 import time
 from django.shortcuts import render
 from rest_framework import generics
+from rest_framework.response import Response
+from rest_framework import status
 from .models import Usuario, Cuestionario, Pregunta, Respuesta, Materia, Tema, Conocimiento
 from .serializers import UsuarioSerializer, CuestionarioSerializer, PreguntaSerializer, MateriaSerializer
 from django.views.decorators.csrf import csrf_exempt
@@ -13,6 +15,7 @@ from dotenv import load_dotenv
 from django.views.generic import TemplateView
 from django.shortcuts import redirect
 from django.utils.safestring import mark_safe
+
 
 from langchain_openai import OpenAIEmbeddings
 from langchain.text_splitter import RecursiveCharacterTextSplitter
@@ -39,6 +42,26 @@ class UsuarioAllView(generics.ListAPIView):
 class CuestionarioCreateView(generics.CreateAPIView):
     queryset = Cuestionario.objects.all()
     serializer_class = CuestionarioSerializer
+
+    def create(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        print(serializer)
+        if serializer.is_valid():
+            cuestionario = serializer.save()
+            response_data = {
+                'success': True,
+                'message': 'Cuestionario guardado exitosamente.',
+                'data': serializer.data  # Esto incluye el serializador del nuevo objeto
+            }
+            print(response_data)  # Imprimir la respuesta en la consola del servidor
+            return Response(response_data, status=status.HTTP_201_CREATED)
+        else:
+            error_response = {
+                'success': False,
+                'errors': serializer.errors
+            }
+            print(error_response)  # Imprimir los errores si el serializer no es válido
+            return Response(error_response, status=status.HTTP_400_BAD_REQUEST)
         
 
 class CuestionarioAllView(generics.CreateAPIView):
@@ -296,6 +319,8 @@ def crear_preguntas(request):
             return JsonResponse({"error": str(e)}, status=500)
     else:
         return JsonResponse({"error": "Método de solicitud no permitido."}, status=405)
+
+
 
 def historial_usuario(request):
     print("=====================================")

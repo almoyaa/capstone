@@ -127,7 +127,7 @@
             alert(`Resultados: ${correctas} correctas, ${incorrectas} incorrectas.`);
         }
         function crearCuestionario() {
-        fetch("{% url 'crear-cuestionario' %}", {
+        fetch("{% url 'crear-cuestionario-api' %}", {
             method: "POST",
             headers: {
                 "Content-Type": "application/json",
@@ -137,11 +137,13 @@
                 titulo: `Cuestionario de ${preguntasGuardadas[0].materia}`,
                 descripcion: `Cuestionario generado para los temas de ${preguntasGuardadas[0].materia}`,
                 materia: preguntasGuardadas[0].materia,
-                respuestas: respuestasUsuario  // Enviar las respuestas del usuario
+                preguntas: preguntasGuardadas.map(p => p.id),  // Asegúrate de enviar los IDs de las preguntas
+                respuestas: respuestasUsuario
             })
         })
         .then(response => response.json())
         .then(data => {
+
             if (data.success) {
                 alert("Cuestionario guardado exitosamente.");
                 window.location.href = '{% url "index-page" %}';  // Redirigir a la página principal
