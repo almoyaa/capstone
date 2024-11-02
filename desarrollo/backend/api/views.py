@@ -34,6 +34,8 @@ class UsuarioAllView(generics.ListAPIView):
     queryset = Usuario.objects.all()
     serializer_class = UsuarioSerializer
 
+
+
 class CuestionarioCreateView(generics.CreateAPIView):
     queryset = Cuestionario.objects.all()
     serializer_class = CuestionarioSerializer

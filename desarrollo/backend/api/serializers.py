@@ -35,8 +35,7 @@ class CuestionarioSerializer(serializers.ModelSerializer):
     preguntas = PreguntaSerializer(many=True)
     class Meta:
         model = Cuestionario
-
-        fields = ['id', 'titulo', 'descripcion','materia','preguntas']
+        fields = ['id', 'titulo', 'descripcion','materia','preguntas_correctas','preguntas']
 
     def create(self, validated_data):
         preguntas_data = validated_data.pop('preguntas', [])

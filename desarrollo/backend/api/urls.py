@@ -1,6 +1,9 @@
 from django.urls import path
 from .views import UsuarioCreateView, CuestionarioCreateView, UsuarioAllView, CuestionarioAllView, PreguntaCreateView, PreguntaAllView, crear_preguntas, MateriaListView, CuestionarioListView
 
+#URL para llamados API
+
+
 urlpatterns = [
     path('crear-usuario/', UsuarioCreateView.as_view(), name='crear-usuario'),
     path('usuarios/', UsuarioAllView.as_view(), name='ver-usuarios'),
