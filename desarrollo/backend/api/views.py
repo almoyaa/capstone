@@ -297,6 +297,52 @@ def crear_preguntas(request):
     else:
         return JsonResponse({"error": "Método de solicitud no permitido."}, status=405)
 
-
-
-
+def historial_usuario(request):
+    print("=====================================")
+    print("ACCEDIENDO A HISTORIAL USUARIO")
+    print("=====================================")
+    
+    try:
+        # Debug inicial
+        print("=== Iniciando historial_usuario ===")
+        
+        # Verificar cuestionarios en la base de datos
+        cuestionarios = Cuestionario.objects.all()
+        print(f"Cantidad de cuestionarios en BD: {cuestionarios.count()}")
+        
+        # Obtener datos crudos antes de convertir a lista
+        datos_crudos = list(cuestionarios.values())
+        
+        # Ahora convertimos a lista para la iteración
+        cuestionarios = list(cuestionarios)
+        
+        # Verificar cada cuestionario
+        for c in cuestionarios:
+            print(f"""
+                ID: {c.id}
+                Título: {c.titulo}
+                Descripción: {c.descripcion}
+                Materia: {c.materia}
+                Preguntas: {c.preguntas.count()}
+            """)
+        
+        # Serialización
+        serializer = CuestionarioSerializer(cuestionarios, many=True)
+        datos_serializer = serializer.data
+        print("Datos serializados:", datos_serializer)
+        
+        context = {
+            'cuestionarios': datos_serializer,
+            'hay_datos': bool(datos_serializer),
+            'cantidad': len(datos_serializer),
+            'datos_crudos': datos_crudos  # Usamos los datos crudos que obtuvimos antes
+        }
+        
+        print("Context enviado al template:", context)
+        
+        return render(request, 'historial.html', context)
+    except Exception as e:
+        print(f"Error en historial_usuario: {str(e)}")
+        import traceback
+        print(traceback.format_exc())
+        return JsonResponse({'error': str(e)}, status=500)

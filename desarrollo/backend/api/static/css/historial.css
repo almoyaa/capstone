@@ -1,15 +1,47 @@
-.titulo-historial {
-    color: brown;
-    display: flex;
-    justify-content: center;
-    /* Centrado horizontal */
-    height: 100px;
-    font-size: 52px;
-    font-style: italic;
-  }
-  
-  .tabla-historial {
-    border: 1px solid black;
-    display: flex;
-    justify-content: center;
-  }
+.cuestionario-card {
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  padding: 20px;
+  margin: 15px 0;
+  background-color: white;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.cuestionario-header {
+  border-bottom: 2px solid #eee;
+  padding-bottom: 10px;
+  margin-bottom: 15px;
+}
+
+.cuestionario-stats {
+  display: flex;
+  justify-content: space-between;
+  background-color: #f8f9fa;
+  padding: 10px;
+  border-radius: 4px;
+  margin-top: 10px;
+}
+
+.stat-item {
+  text-align: center;
+}
+
+.container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 20px;
+}
+
+h1 {
+  color: #333;
+  text-align: center;
+  margin-bottom: 30px;
+}
+
+.materia-badge {
+  background-color: #007bff;
+  color: white;
+  padding: 5px 10px;
+  border-radius: 15px;
+  font-size: 0.9em;
+}
