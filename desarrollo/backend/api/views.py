@@ -2,6 +2,7 @@ import os
 import json
 import openai
 import time
+from datetime import datetime
 from django.shortcuts import render
 from rest_framework import generics
 from rest_framework.response import Response
@@ -44,27 +45,34 @@ class CuestionarioCreateView(generics.CreateAPIView):
     serializer_class = CuestionarioSerializer
 
     def create(self, request, *args, **kwargs):
+        # Obtener la fecha y hora actual en formato 'DD/MM/YYYY HH:MM'
+        fecha_actual = datetime.now().strftime("%d/%m/%Y %H:%M")
+        
+        # Crear un nuevo título con la fecha y hora
+        titulo_con_fecha = f"Cuestionario de {request.data.get('materia')} - {fecha_actual}"
+
+        # Agregar el nuevo título al data del request antes de pasar al serializer
+        request.data['titulo'] = titulo_con_fecha
+
+        # Pasar los datos al serializer
         serializer = self.get_serializer(data=request.data)
-        print(serializer)
+        
         if serializer.is_valid():
-            cuestionario = serializer.save()
+            cuestionario = serializer.save()  # Guardar el cuestionario
             response_data = {
                 'success': True,
                 'message': 'Cuestionario guardado exitosamente.',
                 'data': serializer.data  # Esto incluye el serializador del nuevo objeto
             }
-            print(response_data)  # Imprimir la respuesta en la consola del servidor
             return Response(response_data, status=status.HTTP_201_CREATED)
         else:
             error_response = {
                 'success': False,
                 'errors': serializer.errors
             }
-            print(error_response)  # Imprimir los errores si el serializer no es válido
             return Response(error_response, status=status.HTTP_400_BAD_REQUEST)
-        
 
-class CuestionarioAllView(generics.CreateAPIView):
+class CuestionarioAllView(generics.ListCreateAPIView):
     queryset = Cuestionario.objects.all()
     serializer_class = CuestionarioSerializer
 
@@ -119,11 +127,8 @@ class CrearCuestionarioView(TemplateView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        materias = Materia.objects.exclude(nombre="Ciencias")
-        ciencia = Materia.objects.filter(nombre="Ciencias").first()
-        temas_ciencias = ciencia.tema.all()
-        print(temas_ciencias)
-        context['materias'] = list(materias) + list(temas_ciencias)
+        materias = Materia.objects.all()
+        context['materias'] = materias
         print(context)
         return context
 
@@ -176,13 +181,9 @@ def crear_preguntas(request):
         try:
             # Extraer los parámetros de la solicitud
             cantidad = request.POST.get("cantidad")
-            if (request.POST.get("materia")=='Física' or request.POST.get("materia")=='Química' or request.POST.get("materia")=='Biología' ):
-                materia = Tema.objects.get(nombre=request.POST.get("materia"))
-                print(materia)
-                temas = materia.conocimiento.all()
-            else:
-                materia = Materia.objects.get(nombre=request.POST.get("materia"))
-                temas = materia.tema.all()
+            materia = Materia.objects.get(nombre=request.POST.get("materia"))
+            #Temas de la materia especifico
+            temas = materia.tema.all()
 
             # Ruta a la carpeta con los PDFs
             carpeta_pdfs = "C:/Users/Seba/Desktop/Notebooks/Contenidos"
@@ -191,6 +192,8 @@ def crear_preguntas(request):
             embeddings = OpenAIEmbeddings(model="text-embedding-3-small")
             retriever = cargar_pdfs_desde_carpeta(carpeta_pdfs, embeddings)
             temarios = ', '.join([tema.nombre for tema in temas])
+            print("temarios")
+            print(temarios)
 
             # Definir el prompt
             prompt = ChatPromptTemplate.from_messages(
@@ -198,9 +201,6 @@ def crear_preguntas(request):
                     (
                         "system",
                         """Eres un profesor experto en la evaluación PAES Chile, y los alumnos vienen a solicitarte preguntas de 5 alternativas para poner a prueba sus conocimientos, de gran dificultad. Además de conocer los contenidos del temario de cada evaluación, solo entrega json, nada más de texto, solo json.
-                        Si es de Ciencia, los temas son de Física, Química o Biología.
-                        
-                        
                         [
                 {{
                     "pregunta": "Texto de la pregunta",
@@ -216,7 +216,10 @@ def crear_preguntas(request):
                 ...
             ]"""
                     ),
-                    ("human", f"Dame {cantidad} preguntas en formato JSON de los siguientes temarios: {temarios}"),
+                    (
+            "human",
+            f"Dame preguntas en formato JSON de los siguientes temarios: {temarios}."
+        ),
                     MessagesPlaceholder(variable_name="agent_scratchpad"),
                 ]
             )
@@ -233,10 +236,9 @@ def crear_preguntas(request):
             model = ChatOpenAI(temperature=0, model="gpt-4o", seed=seed)
             agent = create_openai_tools_agent(model, tools, prompt)
             agent_executor = AgentExecutor(agent=agent, tools=tools, verbose=True)
-            print("asdsadl;asjdlkaskdjas")
-            # Ejecutar la consulta
 
-            
+            # Ejecutar la consulta
+            print(temarios)
             response = agent_executor.invoke({"input": f"Dame {cantidad} preguntas en formato json de los siguientes temarios: {temarios}, solo json, nada más, SOLO JSON"})
             
             output_text = response.get("output", "")
@@ -251,26 +253,9 @@ def crear_preguntas(request):
             materia_nombre = materia.nombre
 
             for pregunta_data in preguntas_data:
-
-                if(materia_nombre=='Física' or materia_nombre=='Química' or materia_nombre == 'Biología'):
-                    print("ifififif")
-                    print(materia_nombre)
-                    print(pregunta_data["tema"])
-                    print("=======")
-                    print(materia.nombre)
-                    tema = Tema.objects.get(nombre=materia_nombre)
-                    print(tema)
-                    materia = Materia.objects.get(nombre="Ciencias")
-                    print(pregunta_data["tema"])
-                    sub_tema = pregunta_data["tema"]
-                # Obtener la materia y el tema
-                else:
-                    print("elsleslelse")
-                    print(materia_nombre)
-                    print(materia.nombre)
-                    print(pregunta_data["tema"])
-                    tema = Tema.objects.get(nombre=pregunta_data["tema"])
-                print("Creando la pregunta")
+                print(pregunta_data)
+                print(pregunta_data["tema"])
+                tema = Tema.objects.get(nombre=pregunta_data["tema"])
                 # Crear la pregunta
                 pregunta = Pregunta.objects.create(
                     texto_pregunta=pregunta_data["pregunta"],

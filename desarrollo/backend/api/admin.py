@@ -10,6 +10,7 @@ class UsuarioAdmin(admin.ModelAdmin):
     inlines = [CuestionarioInline]  # Añade la vista inline para cuestionarios
 
 class CuestionarioAdmin(admin.ModelAdmin):
+    readonly_fields = ('respuestas_correctas',)
     list_display = ('titulo', 'descripcion','materia', 'usuario')
     list_filter = ('usuario', 'materia')  # Filtros para la lista de cuestionarios
 
@@ -25,6 +26,7 @@ class TemaAdmin(admin.ModelAdmin):
 
 class ConocimientoAdmin(admin.ModelAdmin):
     list_display = ('nombre','id')
+    
 
 class RespuestaAdmin(admin.ModelAdmin):
     list_display = ('texto_respuesta', 'es_correcta', 'pregunta')

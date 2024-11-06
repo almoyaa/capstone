@@ -27,7 +27,7 @@
 
         <div class="botones-container">
             <button id="atras" type="button" onclick="obtenerPreguntaAnterior()">Atrás</button>
-            <p id="numero-pregunta"></p> 
+            <p id="numero-pregunta"></p>
             <button id="siguiente" type="button" onclick="obtenerSiguientePregunta()">Siguiente</button>
         </div>
     </div>
@@ -70,6 +70,7 @@
 
             // Guardar la respuesta seleccionada en el array
             respuestasUsuario[preguntaActualIndex] = {
+                id:respuesta.id,
                 pregunta: pregunta.texto_pregunta,
                 respuestaSeleccionada: respuesta.texto_respuesta,
                 esCorrecta: respuesta.es_correcta  // Asegúrate de que 'respuesta' tenga la propiedad 'es_correcta'
@@ -97,7 +98,6 @@
                 // Mostrar resultados al finalizar todas las preguntas
                 mostrarResultados();
                 //CREAR CUESTIONARIO CON USUARIO Y RESPUESTAS CORRESPNDIENTES.
-                crearCuestionario();
             }
         }
 
@@ -125,36 +125,46 @@
             });
 
             alert(`Resultados: ${correctas} correctas, ${incorrectas} incorrectas.`);
-        }
-        function crearCuestionario() {
-        fetch("{% url 'crear-cuestionario-api' %}", {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-                "X-CSRFToken": "{{ csrf_token }}"
-            },
-            body: JSON.stringify({
-                titulo: `Cuestionario de ${preguntasGuardadas[0].materia}`,
-                descripcion: `Cuestionario generado para los temas de ${preguntasGuardadas[0].materia}`,
-                materia: preguntasGuardadas[0].materia,
-                preguntas: preguntasGuardadas.map(p => p.id),  // Asegúrate de enviar los IDs de las preguntas
-                respuestas: respuestasUsuario
-            })
-        })
-        .then(response => response.json())
-        .then(data => {
+            crearCuestionario(correctas, respuestasUsuario)
 
-            if (data.success) {
-                alert("Cuestionario guardado exitosamente.");
-                window.location.href = '{% url "index-page" %}';  // Redirigir a la página principal
-            } else {
-                alert("Hubo un error al guardar el cuestionario.");
-            }
-        })
-        .catch(error => {
-            console.error("Error al crear el cuestionario:", error);
-        });
-    }
+
+        }
+        function crearCuestionario(correctas, respuestasUsuario) {
+            console.log("Preguntas Guardadas")
+            console.log(preguntasGuardadas)
+            console.log("Respuestas Usuario")
+            console.log(respuestasUsuario)
+
+
+            fetch("{% url 'crear-cuestionario-api' %}", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    "X-CSRFToken": "{{ csrf_token }}"
+                },
+                body: JSON.stringify({
+                    titulo: `Cuestionario de ${preguntasGuardadas[0].materia}`,
+                    descripcion: `Cuestionario generado para los temas de ${preguntasGuardadas[0].materia}`,
+                    materia: preguntasGuardadas[0].materia,
+                    preguntas: preguntasGuardadas.map(p => p.id),  // Asegúrate de enviar los IDs de las preguntas
+                    respuestas_usuario: respuestasUsuario.map(r => r.id),  // Enviar respuestas del usuario
+                    respuestas_correctas: correctas  // Enviar total de respuestas correctas
+                })
+            })
+                .then(response => response.json())
+                .then(data => {
+
+                    if (data.success) {
+                        alert("Cuestionario guardado exitosamente.");
+                        window.location.href = '{% url "index-page" %}';  // Redirigir a la página principal
+                    } else {
+                        alert("Hubo un error al guardar el cuestionario.");
+                    }
+                })
+                .catch(error => {
+                    console.error("Error al crear el cuestionario:", error);
+                });
+        }
 
         // Cargar la primera pregunta cuando la página cargue
         window.onload = function () {

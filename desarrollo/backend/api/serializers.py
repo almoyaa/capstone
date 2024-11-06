@@ -31,25 +31,14 @@ class PreguntaSerializer(serializers.ModelSerializer):
         model = Pregunta
         fields = ['id', 'texto_pregunta', 'materia','respuestas']
 
-#class CuestionarioSerializer(serializers.ModelSerializer):
-#    preguntas = PreguntaSerializer(many=True)
-#    class Meta:
-#        model = Cuestionario
-#
-#        fields = ['id', 'titulo', 'descripcion','materia','preguntas', 'preguntas_correctas']
-#
-#    def create(self, validated_data):
-#        preguntas_data = validated_data.pop('preguntas', [])
-#        cuestionario = Cuestionario.objects.create(**validated_data)
-#        cuestionario.preguntas.set(preguntas_data)  # Añade las preguntas al cuestionario
-#        return cuestionario
 
 class CuestionarioSerializer(serializers.ModelSerializer):
-    preguntas = PreguntaSerializer(many=True, read_only=True)  # Añadimos read_only=True
+    preguntas = serializers.PrimaryKeyRelatedField(queryset=Pregunta.objects.all(), many=True)
     
     class Meta:
         model = Cuestionario
-        fields = ['id', 'titulo', 'descripcion', 'materia', 'preguntas', 'preguntas_correctas']
+        fields = ['id', 'titulo', 'descripcion', 'materia', 'preguntas', 'respuestas_correctas', 'respuestas_usuario']
+        
         
     
 class ConocimientoSerializer(serializers.ModelSerializer):
