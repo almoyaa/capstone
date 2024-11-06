@@ -177,7 +177,6 @@ def cargar_pdfs_desde_carpeta(carpeta, embeddings_model):
 @csrf_exempt
 def crear_preguntas(request):
     if request.method == 'POST':
-        print(request.POST)
         try:
             # Extraer los parámetros de la solicitud
             cantidad = request.POST.get("cantidad")
@@ -192,8 +191,6 @@ def crear_preguntas(request):
             embeddings = OpenAIEmbeddings(model="text-embedding-3-small")
             retriever = cargar_pdfs_desde_carpeta(carpeta_pdfs, embeddings)
             temarios = ', '.join([tema.nombre for tema in temas])
-            print("temarios")
-            print(temarios)
 
             # Definir el prompt
             prompt = ChatPromptTemplate.from_messages(
@@ -218,7 +215,7 @@ def crear_preguntas(request):
                     ),
                     (
             "human",
-            f"Dame preguntas en formato JSON de los siguientes temarios: {temarios}."
+            f"Dame preguntas {cantidad} en formato JSON de los siguientes temarios: {temarios}."
         ),
                     MessagesPlaceholder(variable_name="agent_scratchpad"),
                 ]
@@ -239,14 +236,15 @@ def crear_preguntas(request):
 
             # Ejecutar la consulta
             print(temarios)
-            response = agent_executor.invoke({"input": f"Dame {cantidad} preguntas en formato json de los siguientes temarios: {temarios}, solo json, nada más, SOLO JSON"})
+            response = agent_executor.invoke({})
             
             output_text = response.get("output", "")
 
             # El JSON limpio
             clean_output = output_text.replace('```json\n', '').replace('```', '')
             preguntas_data = json.loads(clean_output)
-
+            print("Preguntas frescas en vista:")
+            print(preguntas_data)
 
             preguntas_guardadas = []
 
@@ -294,6 +292,8 @@ def crear_preguntas(request):
                 preguntas_guardadas.append(pregunta_json)
 
             
+            print("Preguntas guardadas")
+            print(preguntas_guardadas)
             
             # Guardar las preguntas en la sesión
             request.session['preguntas_guardadas'] = preguntas_guardadas
