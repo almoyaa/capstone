@@ -1,5 +1,5 @@
 from django.urls import path
-from .views import UsuarioCreateView, CuestionarioCreateView, UsuarioAllView, CuestionarioAllView, PreguntaCreateView, PreguntaAllView, crear_preguntas, MateriaListView, CuestionarioListView, historial_usuario, HistorialTemplateView
+from .views import UsuarioCreateView, CuestionarioCreateView, UsuarioAllView, CuestionarioAllView, PreguntaCreateView, PreguntaAllView, crear_preguntas, MateriaListView, CuestionarioListView, historial_usuario, HistorialTemplateView, retro
 
 #URL para llamados API
 
@@ -14,5 +14,6 @@ urlpatterns = [
     path('materias/',MateriaListView.as_view(), name='ver-materias'),
     path('crear-preguntas/', crear_preguntas,name='crear-preguntas'),
     path('cuestionarios/<int:usuario_id>/', CuestionarioListView.as_view(), name='cuestionarios-usuario'),
-    path('historial/', historial_usuario, name='historial-datos'), 
+    path('historial/', historial_usuario, name='historial-datos'),
+    path('retro/',retro, name='crear-retro')
 ]

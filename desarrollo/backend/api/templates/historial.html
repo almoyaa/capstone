@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="es">
+
 <head>
     <title>Historial de Cuestionarios</title>
     {% load static %}
@@ -13,42 +14,47 @@
         <h1>Historial de Cuestionarios</h1>
 
         {% if cuestionarios %}
-            {% for cuestionario in cuestionarios %}
-            <div class="cuestionario-card">
-                <div class="cuestionario-header">
+        {% for cuestionario in cuestionarios %}
+        <div class="cuestionario-card">
+            <div class="cuestionario-header">
+                <div class="cuestionario-title">
                     <h3>{{ cuestionario.titulo }}</h3>
-                    <span class="materia-badge">{{ cuestionario.materia }}</span>
+                    <div class="cuestionario-button">
+                        <form action="{% url 'mostrar-retro' %}" method="POST">
+                            {% csrf_token %}
+                            <input type="hidden" name="cuestionario_id" value="{{ cuestionario.id }}">
+                            <button type="submit" class="cuestionario-button">Retroalimentación</button>
+                        </form>
+                    </div>
                 </div>
-                
-                <p><strong>ID:</strong> {{ cuestionario.id }}</p>
-                <p><strong>Descripción:</strong> {{ cuestionario.descripcion }}</p>
-                
-                <div class="cuestionario-stats">
-                    <div class="stat-item">
-                        <strong>Preguntas Correctas</strong>
-                        <p>{{ cuestionario.respuestas_correctas }}</p>
-                    </div>
-                    <div class="stat-item">
-                        <strong>Total Preguntas</strong>
-                        <p>{{ cuestionario.preguntas|length }}</p>
-                    </div>
-                    <div class="stat-item">
-                        <strong>Resultado</strong>
-                        <p>{{ cuestionario.respuestas_correctas }}/{{ cuestionario.preguntas|length }}</p>
-                    </div>
-                    <data class="">
-                        <button>
-                            Retro
-                        </button>
-                    </data>
+                <span class="materia-badge">{{ cuestionario.materia }}</span>
+            </div>
+
+            <p><strong>ID:</strong> {{ cuestionario.id }}</p>
+            <p><strong>Descripción:</strong> {{ cuestionario.descripcion }}</p>
+
+            <div class="cuestionario-stats">
+                <div class="stat-item">
+                    <strong>Preguntas Correctas</strong>
+                    <p>{{ cuestionario.respuestas_correctas }}</p>
+                </div>
+                <div class="stat-item">
+                    <strong>Total Preguntas</strong>
+                    <p>{{ cuestionario.preguntas|length }}</p>
+                </div>
+                <div class="stat-item">
+                    <strong>Resultado</strong>
+                    <p>{{ cuestionario.respuestas_correctas }}/{{ cuestionario.preguntas|length }}</p>
                 </div>
             </div>
-            {% endfor %}
+        </div>
+        {% endfor %}
         {% else %}
-            <div class="cuestionario-card">
-                <p>No hay cuestionarios disponibles.</p>
-            </div>
+        <div class="cuestionario-card">
+            <p>No hay cuestionarios disponibles.</p>
+        </div>
         {% endif %}
     </div>
 </body>
+
 </html>

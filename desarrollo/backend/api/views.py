@@ -3,19 +3,23 @@ import json
 import openai
 import time
 from datetime import datetime
+from collections import defaultdict
 from django.shortcuts import render
+from django.shortcuts import get_object_or_404
+from django.shortcuts import redirect
 from rest_framework import generics
 from rest_framework.response import Response
 from rest_framework import status
 from .models import Usuario, Cuestionario, Pregunta, Respuesta, Materia, Tema, Conocimiento
 from .serializers import UsuarioSerializer, CuestionarioSerializer, PreguntaSerializer, MateriaSerializer
+from django.utils.decorators import method_decorator
 from django.views.decorators.csrf import csrf_exempt
 from django.conf import settings
 from django.http import JsonResponse
 from dotenv import load_dotenv
 from django.views.generic import TemplateView
-from django.shortcuts import redirect
 from django.utils.safestring import mark_safe
+
 
 
 from langchain_openai import OpenAIEmbeddings
@@ -37,8 +41,6 @@ class UsuarioCreateView(generics.CreateAPIView):
 class UsuarioAllView(generics.ListAPIView):
     queryset = Usuario.objects.all()
     serializer_class = UsuarioSerializer
-
-
 
 class CuestionarioCreateView(generics.CreateAPIView):
     queryset = Cuestionario.objects.all()
@@ -118,6 +120,8 @@ class PreguntaTemplateView(TemplateView):
         context['preguntas_json'] = json.dumps(preguntas)  # Convertir a JSON
         return context
 
+        
+
 
 class HistorialTemplateView(TemplateView):
     template_name = "historial.html"
@@ -131,6 +135,42 @@ class CrearCuestionarioView(TemplateView):
         context['materias'] = materias
         print(context)
         return context
+
+class RetroalimentacionTemplateView(TemplateView):
+    template_name = "retroalimentacion.html"
+
+    @method_decorator(csrf_exempt)
+    def dispatch(self, *args, **kwargs):
+        return super().dispatch(*args, **kwargs)
+
+    def post(self, request, *args, **kwargs):
+        cuestionario_id = request.POST.get('cuestionario_id')
+        cuestionario = get_object_or_404(Cuestionario, id=cuestionario_id)
+        preguntas = cuestionario.preguntas.all()
+        respuestas = cuestionario.respuestas_usuario.all()
+        print("PREGUNTAS")
+        print(preguntas)
+        
+        respuestas_erroneas = []
+        respuestas_erroneas_por_tema = defaultdict(list)
+
+        for respuesta in respuestas:
+            if respuesta.es_correcta!=True:
+                respuestas_erroneas.append(respuesta)
+
+        respuestas_erroneas = sorted(
+                [respuesta for respuesta in cuestionario.respuestas_usuario.all() if not respuesta.es_correcta],
+                key=lambda respuesta: respuesta.pregunta.tema.nombre
+            )
+        
+        print("RESESPESTA ERRONEAS")
+        print(respuestas_erroneas)
+        print("RESPUESTA DEL USUARIO")
+        print(respuestas)
+        context = self.get_context_data(cuestionario=cuestionario, preguntas=preguntas, respuestas_erroneas=respuestas_erroneas)
+
+        return self.render_to_response(context)
+
 
 def cargar_pdfs_desde_carpeta(carpeta, embeddings_model):
     todos_los_documentos = []
@@ -356,3 +396,59 @@ def historial_usuario(request):
         import traceback
         print(traceback.format_exc())
         return JsonResponse({'error': str(e)}, status=500)
+
+
+@csrf_exempt
+def retro(request):
+    if request.method == 'POST':
+        try:
+            # Extraer los parámetros de la solicitud
+            pregunta = request.POST.get("pregunta")
+            respuesta_usuario = request.POST.get("respuesta_usuario")
+            respuesta_correcta = request.POST.get("respuesta_correcta")
+            materia = request.POST.get("materia")
+            print(pregunta,respuesta_usuario,respuesta_correcta,materia)
+            
+            carpeta_pdfs = "C:/Users/Seba/Desktop/Notebooks/Contenidos"
+
+            # Crear embeddings
+            embeddings = OpenAIEmbeddings(model="text-embedding-3-small")
+            retriever = cargar_pdfs_desde_carpeta(carpeta_pdfs, embeddings)
+
+            # Definir el prompt
+            prompt = ChatPromptTemplate.from_messages(
+    [
+        (
+            "system",
+            f"""Eres un profesor experto en {materia} para la evaluación PAES de Chile, donde los alumnos te preguntan porque la respuesta que ellos entregaron es errónea, guiando al estudiante cómo llegar a la respuesta correcta."""
+        ),
+        (
+            "human",
+            f"¿Por qué de la pregunta: {pregunta}, con mi respuesta {respuesta_usuario} es errónea? siendo la respuesta: {respuesta_correcta}."
+        ),
+        MessagesPlaceholder(variable_name="agent_scratchpad"),
+    ]
+)
+
+            # Crear herramientas y ejecutar el agente
+            retriever_tool = create_retriever_tool(
+                retriever,
+                "Temarios_prueba_PAES",
+                "Recurso para establecer el contenido con los que se van evaluar los conocimientos del alumno, para cada temario.",
+            )
+
+            tools = [retriever_tool]
+            seed = int(time.time())
+            model = ChatOpenAI(temperature=0.3, model="gpt-4o", seed=seed)
+            agent = create_openai_tools_agent(model, tools, prompt)
+            agent_executor = AgentExecutor(agent=agent, tools=tools, verbose=True)
+            response = agent_executor.invoke({})
+            
+            output_text = response.get("output", "")
+
+            return render(request, 'pregunta.html', {"output_text": output_text})
+
+        except Exception as e:
+            return JsonResponse({"error": str(e)}, status=500)
+    else:
+        return JsonResponse({"error": "Método de solicitud no permitido."}, status=405)

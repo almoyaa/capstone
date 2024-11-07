@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <title>Retroalimentacion de cuestionario</title>
+    {% load static %}
+    <link rel="stylesheet" href="{% static 'css/retroalimentacion.css' %}">
+</head>
+
+{% include "navbar.html" %}
+
+<body>
+    <div class="container">
+        <h1>Retroalimentación</h1>
+        <div>
+            <h2>{{ cuestionario.titulo }}</h2>
+            <p><strong>Descripción:</strong> {{ cuestionario.descripcion }}</p>
+            <p><strong>Materia:</strong> {{ cuestionario.materia }}</p>
+        </div>
+
+        <div>
+            <p><strong>Preguntas Correctas:</strong> {{ cuestionario.respuestas_correctas }}</p>
+            <p><strong>Total de Preguntas:</strong> {{ preguntas|length }}</p>
+            <p><strong>Resultado:</strong> {{ cuestionario.respuestas_correctas }}/{{ preguntas|length }}</p>
+        </div>
+        <h1>Respuestas erroneas</h1>
+        <div>
+            {% for respuesta_erronea in respuestas_erroneas%}
+            <p>
+                <strong>{{ forloop.counter }}</strong>. {{ respuesta_erronea.pregunta }}
+            </p>
+            <div><strong>R:</strong> {{respuesta_erronea}}, <strong>Tema:</strong> {{respuesta_erronea.pregunta.tema}}
+            </div>
+            <form action="{% url 'crear-retro' %}" method="POST">
+                {% csrf_token %}
+                <input type="hidden" name="pregunta" value="{{ pregunta }}">
+
+                <!-- Campo para la respuesta del usuario -->
+                <input type="hidden" name="respuesta_usuario" value="{{ respuesta_usuario }}" placeholder="Tu respuesta"
+                    required>
+
+                <!-- Campo para la respuesta correcta -->
+                <input type="hidden" name="respuesta_correcta" value="{{ respuesta_correcta }}"
+                    placeholder="Respuesta correcta" required>
+
+                <!-- Campo para la materia -->
+                <input type="hidden" name="materia" value="{{ pregunta.materia}}" placeholder="Materia" required>
+
+                <!-- Botón para enviar -->
+                <button type="hidden" class="cuestionario-button">Retroalimentación</button>
+            </form>
+            {% endfor%}
+        </div>
+
+    </div>
+</body>
+
+</html>
