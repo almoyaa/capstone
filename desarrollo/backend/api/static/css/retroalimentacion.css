@@ -1,0 +1,8 @@
+.sub-container {
+    display: flex;
+    justify-content: space-between;
+}
+
+.graph-container {
+    margin-right: 400px;
+}
