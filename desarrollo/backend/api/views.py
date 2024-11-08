@@ -148,26 +148,30 @@ class RetroalimentacionTemplateView(TemplateView):
         cuestionario = get_object_or_404(Cuestionario, id=cuestionario_id)
         preguntas = cuestionario.preguntas.all()
         respuestas = cuestionario.respuestas_usuario.all()
-        print("PREGUNTAS")
-        print(preguntas)
         
         respuestas_erroneas = []
         respuestas_erroneas_por_tema = defaultdict(list)
 
+        # Identificar respuestas erróneas y agruparlas por tema
         for respuesta in respuestas:
-            if respuesta.es_correcta!=True:
+            if not respuesta.es_correcta:
+                tema = respuesta.pregunta.tema.nombre
                 respuestas_erroneas.append(respuesta)
+                respuestas_erroneas_por_tema[tema].append(respuesta)
 
-        respuestas_erroneas = sorted(
-                [respuesta for respuesta in cuestionario.respuestas_usuario.all() if not respuesta.es_correcta],
-                key=lambda respuesta: respuesta.pregunta.tema.nombre
-            )
+        # Preparar datos para el gráfico
+        temas = list(respuestas_erroneas_por_tema.keys())
+        errores_por_tema = [len(respuestas_erroneas_por_tema[tema]) for tema in temas]
+        print(temas)
+        print(errores_por_tema)
         
-        print("RESESPESTA ERRONEAS")
-        print(respuestas_erroneas)
-        print("RESPUESTA DEL USUARIO")
-        print(respuestas)
-        context = self.get_context_data(cuestionario=cuestionario, preguntas=preguntas, respuestas_erroneas=respuestas_erroneas)
+        context = self.get_context_data(
+            cuestionario=cuestionario,
+            preguntas=preguntas,
+            respuestas_erroneas=respuestas_erroneas,
+            temas=mark_safe(json.dumps(temas)),
+            errores_por_tema=mark_safe(json.dumps(errores_por_tema))
+        )
 
         return self.render_to_response(context)
 

@@ -1,8 +1,16 @@
 .sub-container {
     display: flex;
-    justify-content: space-between;
+    padding: 15px;
+    border-radius: 15px;
+    background: #95ddf35e;
 }
 
-.graph-container {
-    margin-right: 400px;
+#pie-chart {
+    width: 500px;
+    height: 500px;
+    margin-left: 180px;
+}
+
+.container-info {
+    margin: auto 0;
 }

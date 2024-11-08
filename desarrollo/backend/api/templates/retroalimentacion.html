@@ -1,135 +1,169 @@
 <!DOCTYPE html>
 <html lang="es">
-
-<head>
+  <head>
     <title>Retroalimentación de cuestionario</title>
     {% load static %}
-    <link rel="stylesheet" href="{% static 'css/retroalimentacion.css' %}">
+    <link rel="stylesheet" href="{% static 'css/retroalimentacion.css' %}" />
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-</head>
+  </head>
 
-{% include "navbar.html" %}
+  {% include "navbar.html" %}
 
-<body>
+  <body>
     <div class="container">
-        <h1>Retroalimentación</h1>
-        <div class="sub-container">
-            <div>
-                <div>
-                    <h2>{{ cuestionario.titulo }}</h2>
-                    <p><strong>Descripción:</strong> {{ cuestionario.descripcion }}</p>
-                    <p><strong>Materia:</strong> {{ cuestionario.materia }}</p>
-                </div>
-                <div>
-                    <p><strong>Preguntas Correctas:</strong> {{ cuestionario.respuestas_correctas }}</p>
-                    <p><strong>Total de Preguntas:</strong> {{ preguntas|length }}</p>
-                    <p><strong>Resultado:</strong> {{ cuestionario.respuestas_correctas }}/{{ preguntas|length }}</p>
-                </div>
-            </div>
-            <div class="graph-container">
-                <div id="container" style="width:300px;">
-                    <canvas id="pie-chart"></canvas>
-                </div>
-            </div>
+      <h1>Retroalimentación</h1>
+      <div class="sub-container">
+        <div class="container-info">
+          <h2>{{ cuestionario.titulo }}</h2>
+          <p><strong>Descripción:</strong> {{ cuestionario.descripcion }}</p>
+          <p><strong>Materia:</strong> {{ cuestionario.materia }}</p>
+          <p>
+            <strong>Preguntas Correctas:</strong
+            >{{cuestionario.respuestas_correctas }}
+          </p>
+          <p><strong>Total de Preguntas:</strong> {{ preguntas|length }}</p>
+          <p>
+            <strong>Resultado:</strong>
+            {{cuestionario.respuestas_correctas}}/{{ preguntas|length }}
+          </p>
         </div>
+        <div class="graph-container">
+          <canvas id="pie-chart"></canvas>
+        </div>
+      </div>
 
-        <h1>Respuestas erróneas</h1>
+      <h1>Respuestas erróneas</h1>
+      <div>
+        {% for respuesta_erronea in respuestas_erroneas %}
+        <p>
+          <strong>{{ forloop.counter }}</strong>. {{respuesta_erronea.pregunta}}
+        </p>
         <div>
-            {% for respuesta_erronea in respuestas_erroneas %}
-            <p>
-                <strong>{{ forloop.counter }}</strong>. {{ respuesta_erronea.pregunta }}
-            </p>
-            <div><strong>R:</strong> {{ respuesta_erronea }}, <strong>Tema:</strong> {{ respuesta_erronea.pregunta.tema }}
-            </div>
-            <form id="retro-form-{{ forloop.counter }}" class="retro-form" method="POST">
-                {% csrf_token %}
-                <input type="hidden" name="pregunta" value="{{ respuesta_erronea.pregunta }}">
-                <input type="hidden" name="respuesta_usuario" value="{{ respuesta_erronea.respuesta_usuario }}">
-                <input type="hidden" name="respuesta_correcta" value="{{ respuesta_erronea.respuesta_correcta }}">
-                <input type="hidden" name="materia" value="{{ respuesta_erronea.pregunta.materia }}">
-                <!-- Botón para enviar -->
-                <button type="submit" class="cuestionario-button">Retroalimentación</button>
-            </form>
-            {% endfor %}
+          <strong>R:</strong> {{ respuesta_erronea }},
+          <strong>Tema:</strong> {{respuesta_erronea.pregunta.tema}}
         </div>
+        <form
+          id="retro-form-{{ forloop.counter }}"
+          class="retro-form"
+          method="POST"
+        >
+          {% csrf_token %}
+          <input
+            type="hidden"
+            name="pregunta"
+            value="{{ respuesta_erronea.pregunta }}"
+          />
+          <input
+            type="hidden"
+            name="respuesta_usuario"
+            value="{{ respuesta_erronea.respuesta_usuario }}"
+          />
+          <input
+            type="hidden"
+            name="respuesta_correcta"
+            value="{{ respuesta_erronea.respuesta_correcta }}"
+          />
+          <input
+            type="hidden"
+            name="materia"
+            value="{{ respuesta_erronea.pregunta.materia }}"
+          />
+          <!-- Botón para enviar -->
+          <button type="submit" class="cuestionario-button">
+            Retroalimentación
+          </button>
+        </form>
+        {% endfor %}
+      </div>
 
-        <!-- Contenedor de diálogo de retroalimentación -->
-        <div id="retroalimentacion-dialogo" style="display: none;">
-            <p id="retroalimentacion-respuesta"></p>
-        </div>
+      <!-- Contenedor de diálogo de retroalimentación -->
+      <div id="retroalimentacion-dialogo" style="display: none">
+        <p id="retroalimentacion-respuesta"></p>
+      </div>
     </div>
-</body>
+  </body>
 
-<script>
+  <script>
     document.addEventListener("DOMContentLoaded", function () {
-        // Selecciona todos los formularios de retroalimentación
-        document.querySelectorAll('.retro-form').forEach(form => {
-            form.addEventListener('submit', function (event) {
-                event.preventDefault();  // Previene la recarga de la página
+      // Selecciona todos los formularios de retroalimentación
+      document.querySelectorAll(".retro-form").forEach((form) => {
+        form.addEventListener("submit", function (event) {
+          event.preventDefault(); // Previene la recarga de la página
 
-                const formData = new FormData(form);
+          const formData = new FormData(form);
 
-                // Realizar la solicitud POST con Fetch API
-                fetch("{% url 'crear-retro' %}", {
-                    method: 'POST',
-                    headers: {
-                        'X-CSRFToken': formData.get('csrfmiddlewaretoken'),
-                    },
-                    body: formData
-                })
-                .then(response => response.json())
-                .then(data => {
-                    // Mostrar la respuesta en un cuadro de diálogo
-                    const respuestaContainer = document.getElementById('retroalimentacion-respuesta');
-                    const dialogo = document.getElementById('retroalimentacion-dialogo');
-                    if (data.error) {
-                        respuestaContainer.innerHTML = `<p style="color: red;">Error: ${data.error}</p>`;
-                    } else {
-                        respuestaContainer.innerHTML = `<p>${data.output}</p>`;
-                    }
-                    dialogo.style.display = 'block';
-                })
-                .catch(error => {
-                    console.error('Error:', error);
-                    document.getElementById('retroalimentacion-respuesta').innerHTML = `<p style="color: red;">Ocurrió un error al procesar la retroalimentación.</p>`;
-                });
+          // Realizar la solicitud POST con Fetch API
+          fetch("{% url 'crear-retro' %}", {
+            method: "POST",
+            headers: {
+              "X-CSRFToken": formData.get("csrfmiddlewaretoken"),
+            },
+            body: formData,
+          })
+            .then((response) => response.json())
+            .then((data) => {
+              // Mostrar la respuesta en un cuadro de diálogo
+              const respuestaContainer = document.getElementById(
+                "retroalimentacion-respuesta"
+              );
+              const dialogo = document.getElementById(
+                "retroalimentacion-dialogo"
+              );
+              if (data.error) {
+                respuestaContainer.innerHTML = `<p style="color: red;">Error: ${data.error}</p>`;
+              } else {
+                respuestaContainer.innerHTML = `<p>${data.output}</p>`;
+              }
+              dialogo.style.display = "block";
+            })
+            .catch((error) => {
+              console.error("Error:", error);
+              document.getElementById(
+                "retroalimentacion-respuesta"
+              ).innerHTML = `<p style="color: red;">Ocurrió un error al procesar la retroalimentación.</p>`;
             });
         });
+      });
     });
-</script>
-
-<script>
+  </script>
+  <script>
+    // @ts-ignore
     document.addEventListener("DOMContentLoaded", function () {
-        // Extraer datos de las respuestas erróneas para el gráfico
-        const labels = [];
-        const data = [];
+    const temas = {{ temas| safe}};
+    const erroresPorTema = {{ errores_por_tema| safe}};
 
-        {% for respuesta_erronea in respuestas_erroneas %}
-            labels.push("{{ respuesta_erronea.pregunta }}");
-            data.push({{ respuesta_erronea.respuesta_correcta|length }}); // Ajustar con el valor correcto
-        {% endfor %}
+    console.log(temas);  // Verifica que se impriman correctamente
+    console.log(erroresPorTema);
+    var ctx = document.getElementById('pie-chart').getContext('2d');
+    var myPieChart = new Chart(ctx, {
+        type: 'polarArea',
+        data: {
+            labels: temas,
+            datasets: [{
+                data: erroresPorTema,
+                backgroundColor: [
+                    'rgb(255, 99, 132)',
+                    'rgb(75, 192, 192)',
+                    'rgb(255, 205, 86)',
+                    'rgb(201, 203, 207)',
+                    'rgb(54, 162, 235)'],
+                hoverBackgroundColor:'rgb(240, 37, 0)',
 
-        var ctx = document.getElementById('pie-chart').getContext('2d');
-        var myPieChart = new Chart(ctx, {
-            type: 'doughnut',
-            data: {
-                labels: labels,
-                datasets: [{
-                    data: data,
-                    backgroundColor: ['red', 'orange', 'blue', 'yellow', 'green']
-                }]
-            },
-            options: {
-                responsive: true,
-                plugins: {
-                    legend: {
-                        display: true,
-                        position: 'bottom'
+            }],
+
+
+        },
+        options: {
+            responsive: true,
+            scales: {
+                r: {
+                    angleLines: {
+                      color: 'red'
                     }
-                }
+                  }
             }
-        });
+        }
     });
-</script>
-
+    });
+  </script>
 </html>
