@@ -4,6 +4,7 @@
     <title>Retroalimentación de cuestionario</title>
     {% load static %}
     <link rel="stylesheet" href="{% static 'css/retroalimentacion.css' %}" />
+    <script src="https://cdn.jsdelivr.net/npm/echarts@5.5.1/dist/echarts.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   </head>
 
@@ -18,8 +19,8 @@
           <p><strong>Descripción:</strong> {{ cuestionario.descripcion }}</p>
           <p><strong>Materia:</strong> {{ cuestionario.materia }}</p>
           <p>
-            <strong>Preguntas Correctas:</strong
-            >{{cuestionario.respuestas_correctas }}
+            <strong>Preguntas Correctas:</strong>
+            {{cuestionario.respuestas_correctas }}
           </p>
           <p><strong>Total de Preguntas:</strong> {{ preguntas|length }}</p>
           <p>
@@ -31,49 +32,29 @@
           <canvas id="pie-chart"></canvas>
         </div>
       </div>
-
-      <h1>Respuestas erróneas</h1>
       <div>
-        {% for respuesta_erronea in respuestas_erroneas %}
-        <p>
-          <strong>{{ forloop.counter }}</strong>. {{respuesta_erronea.pregunta}}
-        </p>
+        <h1>Respuestas del cuestionario</h1>
         <div>
-          <strong>R:</strong> {{ respuesta_erronea }},
-          <strong>Tema:</strong> {{respuesta_erronea.pregunta.tema}}
+          {% for respuesta_data in respuestas_usuario %}
+          <p>
+            <strong
+              >{{ forloop.counter }}. {{ respuesta_data.pregunta.texto_pregunta
+              }}</strong
+            >
+          </p>
+
+          <p
+            class="respuesta {% if respuesta_data.es_correcta %}respuesta-correcta{% else %}respuesta-incorrecta{% endif %}"
+          >
+            <strong>Respuesta del usuario:</strong> {{ respuesta_data.respuesta_usuario }}
+            <br />
+            <strong>Respuesta correcta:</strong> {{
+            respuesta_data.respuesta_correcta }}
+          </p>
+
+          <hr />
+          {% endfor %}
         </div>
-        <form
-          id="retro-form-{{ forloop.counter }}"
-          class="retro-form"
-          method="POST"
-        >
-          {% csrf_token %}
-          <input
-            type="hidden"
-            name="pregunta"
-            value="{{ respuesta_erronea.pregunta }}"
-          />
-          <input
-            type="hidden"
-            name="respuesta_usuario"
-            value="{{ respuesta_erronea.respuesta_usuario }}"
-          />
-          <input
-            type="hidden"
-            name="respuesta_correcta"
-            value="{{ respuesta_erronea.respuesta_correcta }}"
-          />
-          <input
-            type="hidden"
-            name="materia"
-            value="{{ respuesta_erronea.pregunta.materia }}"
-          />
-          <!-- Botón para enviar -->
-          <button type="submit" class="cuestionario-button">
-            Retroalimentación
-          </button>
-        </form>
-        {% endfor %}
       </div>
 
       <!-- Contenedor de diálogo de retroalimentación -->
@@ -126,44 +107,62 @@
       });
     });
   </script>
-  <script>
-    // @ts-ignore
-    document.addEventListener("DOMContentLoaded", function () {
-    const temas = {{ temas| safe}};
-    const erroresPorTema = {{ errores_por_tema| safe}};
 
-    console.log(temas);  // Verifica que se impriman correctamente
-    console.log(erroresPorTema);
-    var ctx = document.getElementById('pie-chart').getContext('2d');
-    var myPieChart = new Chart(ctx, {
+  <script>
+    document.addEventListener("DOMContentLoaded", function () {
+      const temas = {{ temas|safe }};
+      const erroresPorTema = {{ errores_por_tema|safe }};
+
+      var ctx = document.getElementById('pie-chart').getContext('2d');
+      var myPieChart = new Chart(ctx, {
         type: 'polarArea',
         data: {
-            labels: temas,
-            datasets: [{
-                data: erroresPorTema,
-                backgroundColor: [
-                    'rgb(255, 99, 132)',
-                    'rgb(75, 192, 192)',
-                    'rgb(255, 205, 86)',
-                    'rgb(201, 203, 207)',
-                    'rgb(54, 162, 235)'],
-                hoverBackgroundColor:'rgb(240, 37, 0)',
-
-            }],
-
-
+          labels: temas,
+          datasets: [{
+            data: erroresPorTema,
+            backgroundColor: [
+              'rgb(255, 99, 132)',
+              'rgb(75, 192, 192)',
+              'rgb(255, 205, 86)',
+              'rgb(201, 203, 207)',
+              'rgb(54, 162, 235)'],
+            hoverBackgroundColor: 'rgb(240, 37, 0)',
+          }],
         },
         options: {
-            responsive: true,
-            scales: {
-                r: {
-                    angleLines: {
-                      color: 'red'
-                    }
-                  }
-            }
+          responsive: true,
         }
+      });
     });
-    });
+  </script>
+
+  <script type="text/javascript">
+    // Initialize the echarts instance based on the prepared dom
+    var myChart = echarts.init(document.getElementById("egraphs"));
+
+    // Specify the configuration items and data for the chart
+    var option = {
+      title: {
+        text: "Barra",
+      },
+      tooltip: {},
+      legend: {
+        data: ["sales"],
+      },
+      xAxis: {
+        data: ["Shirts", "Cardigans", "Chiffons", "Pants", "Heels", "Socks"],
+      },
+      yAxis: {},
+      series: [
+        {
+          name: "sales",
+          type: "bar",
+          data: [5, 20, 36, 10, 10, 20],
+        },
+      ],
+    };
+
+    // Display the chart using the configuration items and data just specified.
+    myChart.setOption(option);
   </script>
 </html>

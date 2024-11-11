@@ -148,27 +148,35 @@ class RetroalimentacionTemplateView(TemplateView):
         cuestionario = get_object_or_404(Cuestionario, id=cuestionario_id)
         preguntas = cuestionario.preguntas.all()
         respuestas = cuestionario.respuestas_usuario.all()
-        
-        respuestas_erroneas = []
+
+        respuestas_usuario = []  # Lista para almacenar las respuestas con detalles
         respuestas_erroneas_por_tema = defaultdict(list)
 
-        # Identificar respuestas erróneas y agruparlas por tema
-        for respuesta in respuestas:
-            if not respuesta.es_correcta:
-                tema = respuesta.pregunta.tema.nombre
-                respuestas_erroneas.append(respuesta)
-                respuestas_erroneas_por_tema[tema].append(respuesta)
+        # Procesar respuestas del usuario
+        for pregunta in preguntas:
+            respuesta_usuario = respuestas.filter(pregunta=pregunta).first()
+            respuesta_correcta = pregunta.respuestas.filter(es_correcta=True).first()
+            es_correcta = respuesta_usuario.es_correcta if respuesta_usuario else False
 
-        # Preparar datos para el gráfico
+            if not es_correcta:
+                tema = pregunta.tema.nombre
+                respuestas_erroneas_por_tema[tema].append(respuesta_usuario)
+
+            respuestas_usuario.append({
+                "pregunta": pregunta,
+                "respuesta_usuario": respuesta_usuario.texto_respuesta if respuesta_usuario else "No respondida",
+                "es_correcta": es_correcta,
+                "respuesta_correcta": respuesta_correcta.texto_respuesta if respuesta_correcta else "No especificada"
+            })
+
+        # Datos para el gráfico
         temas = list(respuestas_erroneas_por_tema.keys())
         errores_por_tema = [len(respuestas_erroneas_por_tema[tema]) for tema in temas]
-        print(temas)
-        print(errores_por_tema)
-        
+
         context = self.get_context_data(
             cuestionario=cuestionario,
             preguntas=preguntas,
-            respuestas_erroneas=respuestas_erroneas,
+            respuestas_usuario=respuestas_usuario,
             temas=mark_safe(json.dumps(temas)),
             errores_por_tema=mark_safe(json.dumps(errores_por_tema))
         )
@@ -449,6 +457,7 @@ def retro(request):
             response = agent_executor.invoke({})
             
             output_text = response.get("output", "")
+            print(output_text)
 
             return render(request, 'pregunta.html', {"output_text": output_text})
 

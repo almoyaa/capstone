@@ -14,3 +14,21 @@
 .container-info {
     margin: auto 0;
 }
+
+.respuesta-correcta {
+    background-color: #d4edda;
+    /* verde claro */
+    color: #155724;
+    /* verde oscuro */
+    padding: 10px;
+    border-radius: 5px;
+}
+
+.respuesta-incorrecta {
+    background-color: #f8d7da;
+    /* rojo claro */
+    color: #721c24;
+    /* rojo oscuro */
+    padding: 10px;
+    border-radius: 5px;
+}
