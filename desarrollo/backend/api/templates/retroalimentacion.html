@@ -27,6 +27,12 @@
             <strong>Resultado:</strong>
             {{cuestionario.respuestas_correctas}}/{{ preguntas|length }}
           </p>
+          <p>
+            <strong>Comentario: </strong>
+            <p id='comentario-openai'>
+              
+            </p>
+          </p>
         </div>
         <div class="graph-container">
           <canvas id="pie-chart"></canvas>
@@ -37,21 +43,21 @@
         <div>
           {% for respuesta_data in respuestas_usuario %}
           <p>
-            <strong
-              >{{ forloop.counter }}. {{ respuesta_data.pregunta.texto_pregunta
-              }}</strong
-            >
+            <strong>
+              {{ forloop.counter }}. {{respuesta_data.pregunta.texto_pregunta}}
+            </strong>
           </p>
 
           <p
             class="respuesta {% if respuesta_data.es_correcta %}respuesta-correcta{% else %}respuesta-incorrecta{% endif %}"
           >
-            <strong>Respuesta del usuario:</strong> {{ respuesta_data.respuesta_usuario }}
+            {% if respuesta_data.es_correcta == False %}
+            <strong>Tú respuesta: </strong>
+            {{ respuesta_data.respuesta_usuario }} {% endif %}
             <br />
-            <strong>Respuesta correcta:</strong> {{
-            respuesta_data.respuesta_correcta }}
+            <strong>Respuesta correcta: </strong>
+            {{ respuesta_data.respuesta_correcta }}
           </p>
-
           <hr />
           {% endfor %}
         </div>
@@ -110,30 +116,30 @@
 
   <script>
     document.addEventListener("DOMContentLoaded", function () {
-      const temas = {{ temas|safe }};
-      const erroresPorTema = {{ errores_por_tema|safe }};
+    const temas = {{ temas| safe }};
+    const erroresPorTema = {{ errores_por_tema| safe }};
 
-      var ctx = document.getElementById('pie-chart').getContext('2d');
-      var myPieChart = new Chart(ctx, {
-        type: 'polarArea',
-        data: {
-          labels: temas,
-          datasets: [{
-            data: erroresPorTema,
-            backgroundColor: [
-              'rgb(255, 99, 132)',
-              'rgb(75, 192, 192)',
-              'rgb(255, 205, 86)',
-              'rgb(201, 203, 207)',
-              'rgb(54, 162, 235)'],
-            hoverBackgroundColor: 'rgb(240, 37, 0)',
-          }],
-        },
-        options: {
-          responsive: true,
-        }
-      });
+    var ctx = document.getElementById('pie-chart').getContext('2d');
+    var myPieChart = new Chart(ctx, {
+      type: 'polarArea',
+      data: {
+        labels: temas,
+        datasets: [{
+          data: erroresPorTema,
+          backgroundColor: [
+            'rgb(255, 99, 132)',
+            'rgb(75, 192, 192)',
+            'rgb(255, 205, 86)',
+            'rgb(201, 203, 207)',
+            'rgb(54, 162, 235)'],
+          hoverBackgroundColor: 'rgb(240, 37, 0)',
+        }],
+      },
+      options: {
+        responsive: true,
+      }
     });
+        });
   </script>
 
   <script type="text/javascript">
@@ -165,4 +171,63 @@
     // Display the chart using the configuration items and data just specified.
     myChart.setOption(option);
   </script>
+
+  <script>
+    document.addEventListener("DOMContentLoaded", function () {
+        async function cargarComentario() {
+            try {
+                // Obtiene el ID del cuestionario desde el contexto de Django
+                const cuestionarioId = {{ cuestionario.id| safe }};
+                console.log(cuestionarioId)
+                
+                // Realiza el fetch a la vista Django para obtener el comentario
+                const response = await fetch("{% url 'obtener-comentario' %}", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                        "X-CSRFToken": "{{ csrf_token }}"
+                    },
+                    body: JSON.stringify({ cuestionario_id: cuestionarioId })
+                });
+
+                // Verifica si la respuesta es exitosa
+                if (!response.ok) {
+                    throw new Error("Error en la solicitud");
+                }
+
+                // Convierte la respuesta a JSON
+                const data = await response.json();
+
+                // Selecciona el div y muestra los datos obtenidos
+                const infoDiv = document.getElementById('comentario-openai');
+                
+                if (data.output) {
+                  // Aplica la función que convierte los asteriscos en negrita
+                  let formattedText = formatTextToBold(data.output);
+  
+                  // Inserta el texto formateado en el div
+                  infoDiv.innerHTML = `
+                      <h2>Comentario del Cuestionario</h2>
+                      <p>${formattedText}</p>
+                  `;
+                } else if (data.error) {
+                    infoDiv.innerHTML = `<p>Error: ${data.error}</p>`;
+                }
+                
+            } catch (error) {
+                console.error("Ocurrió un error al obtener los datos:", error);
+                document.getElementById('comentario-openai').textContent = "Error al cargar los datos.";
+            }
+        }
+
+        function formatTextToBold(text) {
+          return text.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+      }
+
+        // Llama a la función para cargar los datos
+        cargarComentario();
+    });
+</script>
+
+
 </html>

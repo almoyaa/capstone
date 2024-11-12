@@ -429,18 +429,18 @@ def retro(request):
 
             # Definir el prompt
             prompt = ChatPromptTemplate.from_messages(
-    [
-        (
-            "system",
-            f"""Eres un profesor experto en {materia} para la evaluación PAES de Chile, donde los alumnos te preguntan porque la respuesta que ellos entregaron es errónea, guiando al estudiante cómo llegar a la respuesta correcta."""
-        ),
-        (
-            "human",
-            f"¿Por qué de la pregunta: {pregunta}, con mi respuesta {respuesta_usuario} es errónea? siendo la respuesta: {respuesta_correcta}."
-        ),
-        MessagesPlaceholder(variable_name="agent_scratchpad"),
-    ]
-)
+                [
+                    (
+                        "system",
+                        f"""Eres un profesor experto en {materia} para la evaluación PAES de Chile, donde los alumnos te preguntan porque la respuesta que ellos entregaron es errónea, guiando al estudiante cómo llegar a la respuesta correcta."""
+                    ),
+                    (
+                        "human",
+                        f"¿Por qué de la pregunta: {pregunta}, con mi respuesta {respuesta_usuario} es errónea? siendo la respuesta: {respuesta_correcta}."
+                    ),
+                    MessagesPlaceholder(variable_name="agent_scratchpad"),
+                ]
+            )
 
             # Crear herramientas y ejecutar el agente
             retriever_tool = create_retriever_tool(
@@ -460,6 +460,86 @@ def retro(request):
             print(output_text)
 
             return render(request, 'pregunta.html', {"output_text": output_text})
+
+        except Exception as e:
+            return JsonResponse({"error": str(e)}, status=500)
+    else:
+        return JsonResponse({"error": "Método de solicitud no permitido."}, status=405)
+
+
+@csrf_exempt
+def comentario_cuestionario(request):
+    if request.method == 'POST':
+        try:
+            data = json.loads(request.body)
+            cuestionario_id = data.get("cuestionario_id")
+            print(cuestionario_id)
+            cuestionario = Cuestionario.objects.get(id=cuestionario_id)
+            materia = cuestionario.materia
+
+            # Recolectar preguntas, respuestas del usuario, y si fueron correctas o no
+            respuestas_usuario = cuestionario.respuestas_usuario.all()
+            errores = []
+
+            for respuesta in respuestas_usuario:
+                if not respuesta.es_correcta:
+                    errores.append({
+                        "pregunta": respuesta.pregunta.texto_pregunta,
+                        "respuesta_usuario": respuesta.texto_respuesta,
+                        "respuesta_correcta": respuesta.pregunta.respuestas.get(es_correcta=True).texto_respuesta
+                    })
+
+            # Crear una lista de los errores formateados para el prompt
+            errores_texto = "\n".join(
+                f"Pregunta: {error['pregunta']}\n"
+                f"Tu Respuesta: {error['respuesta_usuario']}\n"
+                f"Respuesta Correcta: {error['respuesta_correcta']}\n"
+                for error in errores
+            )
+
+
+            # Crear embeddings y cargar retriever para el contexto
+            carpeta_pdfs = "C:/Users/Seba/Desktop/Notebooks/Contenidos"
+            embeddings = OpenAIEmbeddings(model="text-embedding-3-small")
+            retriever = cargar_pdfs_desde_carpeta(carpeta_pdfs, embeddings)
+
+            # Definir el prompt con las respuestas incorrectas y el contexto
+            prompt = ChatPromptTemplate.from_messages(
+                [
+                    (
+                        "system",
+                        f"""Eres un profesor experto en {materia} para la evaluación PAES de Chile. 
+                        A continuación se te entregan algunas preguntas incorrectas del cuestionario del usuario.
+                        Proporciona recomendaciones y sugerencias específicas para ayudar al estudiante a comprender sus errores 
+                        y mejorar en el tema.
+                        """),
+                    (
+                        "human",
+                        f"Errores en el cuestionario:\n{errores_texto}\n\n"
+                        "¿Qué puedo hacer para mejorar mis resultados en base a los errores anteriores?"
+                    ),
+                    MessagesPlaceholder(variable_name="agent_scratchpad"),
+                ]
+            )
+
+            # Crear herramientas y ejecutar el agente
+            retriever_tool = create_retriever_tool(
+                retriever,
+                "Temarios_prueba_PAES",
+                "Recurso para establecer el contenido con los que se van evaluar los conocimientos del alumno, para cada temario.",
+            )
+
+            tools = [retriever_tool]
+            seed = int(time.time())
+            model = ChatOpenAI(temperature=0.3, model="gpt-4o", seed=seed, max_tokens=300)
+            agent = create_openai_tools_agent(model, tools, prompt)
+            agent_executor = AgentExecutor(agent=agent, tools=tools, verbose=True)
+            response = agent_executor.invoke({})
+            
+            output_text = response.get("output", "")
+            print(output_text)
+
+            return JsonResponse({"output": output_text})
 
         except Exception as e:
             return JsonResponse({"error": str(e)}, status=500)

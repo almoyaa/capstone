@@ -11,10 +11,6 @@
     margin-left: 180px;
 }
 
-.container-info {
-    margin: auto 0;
-}
-
 .respuesta-correcta {
     background-color: #d4edda;
     /* verde claro */
@@ -22,6 +18,7 @@
     /* verde oscuro */
     padding: 10px;
     border-radius: 5px;
+    display: flex;
 }
 
 .respuesta-incorrecta {
