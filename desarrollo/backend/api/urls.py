@@ -1,5 +1,5 @@
 from django.urls import path
-from .views import UsuarioCreateView, CuestionarioCreateView, UsuarioAllView, CuestionarioAllView, PreguntaCreateView, PreguntaAllView, crear_preguntas, MateriaListView, CuestionarioListView, historial_usuario, HistorialTemplateView
+from .views import UsuarioCreateView, CuestionarioCreateView, UsuarioAllView, CuestionarioAllView, PreguntaCreateView, PreguntaAllView, crear_preguntas, MateriaListView, CuestionarioListView, historial_usuario, obtener_progreso
 
 urlpatterns = [
     path('crear-usuario/', UsuarioCreateView.as_view(), name='crear-usuario'),
@@ -12,4 +12,5 @@ urlpatterns = [
     path('crear-preguntas/', crear_preguntas,name='crear-preguntas'),
     path('cuestionarios/<int:usuario_id>/', CuestionarioListView.as_view(), name='cuestionarios-usuario'),
     path('historial/', historial_usuario, name='historial-datos'), 
+    path('progreso/', obtener_progreso, name='obtener-progreso'),
 ]

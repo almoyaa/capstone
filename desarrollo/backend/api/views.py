@@ -75,6 +75,11 @@ client = openai.OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 class IndexTemplateView(TemplateView):
     template_name = "index.html"
 
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['materias'] = Materia.objects.all()
+        return context
+
 class PreguntaTemplateView(TemplateView):
     template_name = "pregunta.html"
 
@@ -160,7 +165,7 @@ def crear_preguntas(request):
                 temas = materia.tema.all()
 
             # Ruta a la carpeta con los PDFs
-            carpeta_pdfs = "C:/Users/Seba/Desktop/Notebooks/Contenidos"
+            carpeta_pdfs = "C:/Users/Alejandro/capstone/desarrollo/backend/api/pdf"
 
             # Crear embeddings
             embeddings = OpenAIEmbeddings(model="text-embedding-3-small")
@@ -344,3 +349,67 @@ def historial_usuario(request):
         import traceback
         print(traceback.format_exc())
         return JsonResponse({'error': str(e)}, status=500)
+
+@csrf_exempt
+def obtener_progreso(request):
+    if request.method == 'GET':
+        try:
+            materia = request.GET.get('materia')
+            cantidad = int(request.GET.get('cantidad', 5))
+            
+            # Verificar si es una materia de Ciencias
+            if materia in ['Física', 'Química', 'Biología']:
+                tema = Tema.objects.get(nombre=materia)
+                cuestionarios = Cuestionario.objects.filter(
+                    tema=tema,
+                    fecha_realizacion__isnull=False
+                ).order_by('fecha_realizacion')
+            else:
+                materia_obj = Materia.objects.get(nombre=materia)
+                cuestionarios = Cuestionario.objects.filter(
+                    materia=materia_obj,
+                    preguntas_correctas__isnull=False,
+                    fecha_realizacion__isnull=False
+                ).order_by('fecha_realizacion')
+            
+            print(f"Cuestionarios encontrados para {materia}: {cuestionarios.count()}")
+            
+            resultados = []
+            fechas = []
+            
+            for cuestionario in cuestionarios:
+                # Obtener todas las preguntas del cuestionario
+                preguntas = cuestionario.preguntas.all()  # Obtener todas las preguntas
+                
+                # Verificar si el cuestionario tiene exactamente la cantidad de preguntas seleccionadas
+                if preguntas.count() != cantidad:
+                    continue  # Saltar este cuestionario si no cumple con la cantidad
+
+                # Contar respuestas correctas
+                total_preguntas_correctas = cuestionario.preguntas_correctas
+                
+                resultados.append(total_preguntas_correctas)  # Guardar solo las respuestas correctas
+                fechas.append(cuestionario.fecha_realizacion.strftime('%Y-%m-%d'))
+            
+            # Generar valores del eje Y según la cantidad seleccionada
+            if cantidad <= 10:
+                valores = list(range(cantidad + 1))  # [0,1,2,3,4,5] o [0,1,2,3,4,5,6,7,8,9,10]
+            else:
+                valores = list(range(0, cantidad + 1, 5))  # [0,5,10,15] o [0,5,10,15,20]
+            
+            print(f"Valores del eje Y: {valores}")  # Debug
+            print(f"Resultados: {resultados}")      # Debug
+            print(f"Fechas: {fechas}")             # Debug
+            
+            return JsonResponse({
+                'valores': valores,
+                'fechas': fechas,
+                'resultados': resultados
+            })
+            
+        except Exception as e:
+            print(f"Error en obtener_progreso: {str(e)}")
+            import traceback
+            print(traceback.format_exc())
+            return JsonResponse({'error': str(e)}, status=500)
+

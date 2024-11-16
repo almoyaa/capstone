@@ -85,10 +85,12 @@ class Cuestionario(models.Model):
     id = models.AutoField(primary_key=True)
     titulo = models.CharField(max_length=100)
     descripcion = models.TextField()
-    materia = models.CharField(max_length=100,null=True, blank=True)
-    usuario = models.ForeignKey(Usuario,null=True, blank=True, on_delete=models.CASCADE, related_name='cuestionarios')
+    materia = models.CharField(max_length=100, null=True, blank=True)
+    usuario = models.ForeignKey(Usuario, null=True, blank=True, on_delete=models.CASCADE, related_name='cuestionarios')
     preguntas = models.ManyToManyField(Pregunta, blank=True)
     preguntas_correctas = models.IntegerField(null=True, blank=True)
+    fecha_creacion = models.DateTimeField(auto_now_add=True)  # Añadimos este campo
+    fecha_realizacion = models.DateTimeField(null=True, blank=True)  # Y este campo opcional
 
     def __str__(self):
         return self.titulo
