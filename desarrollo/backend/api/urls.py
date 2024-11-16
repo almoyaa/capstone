@@ -16,5 +16,5 @@ urlpatterns = [
     path('cuestionarios/<int:usuario_id>/', CuestionarioListView.as_view(), name='cuestionarios-usuario'),
     path('historial/', historial_usuario, name='historial-datos'),
     path('retro/',retro, name='crear-retro'),
-    path('obtener-comentario',comentario_cuestionario,name='obtener-comentario')
+    path('comentario_cuestionario',comentario_cuestionario,name='comentario_cuestionario')
 ]

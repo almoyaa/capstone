@@ -34,6 +34,53 @@ from langchain_openai import ChatOpenAI
 from langchain.agents import AgentExecutor, create_openai_tools_agent
 
 load_dotenv()
+def cargar_pdfs_desde_carpeta(carpeta, embeddings_model):
+    todos_los_documentos = []
+
+    # Crear una instancia de RecursiveCharacterTextSplitter
+    text_splitter = RecursiveCharacterTextSplitter(
+        chunk_size=1000,  # Tamaño del fragmento
+        chunk_overlap=200  # Superposición entre fragmentos
+    )
+
+    # Recorrer todos los archivos de la carpeta
+    for archivo in os.listdir(carpeta):
+        if archivo.endswith(".pdf"):
+            ruta_completa = os.path.join(carpeta, archivo)
+            print(f"Cargando {ruta_completa}")
+
+            # Cargar y dividir el PDF en páginas
+            loader = PyPDFLoader(ruta_completa)
+            paginas = loader.load_and_split()
+
+            # Procesar cada página
+            for pagina in paginas:
+                # Verificar que 'pagina' sea un objeto Document
+                if hasattr(pagina, 'page_content'):
+                    # Aplicar el text_splitter a cada página
+                    fragments = text_splitter.split_text(pagina.page_content)
+                    # Crear y agregar objetos Document para cada fragmento
+                    for fragment in fragments:
+                        doc = Document(page_content=fragment, metadata={"source": ruta_completa})
+                        todos_los_documentos.append(doc)
+                else:
+                    print(f"Advertencia: La página no tiene el atributo 'page_content': {pagina}")
+
+    # Crear el índice vectorial FAISS con todos los documentos combinados
+    faiss_index = FAISS.from_documents(todos_los_documentos, embeddings_model)
+
+    # Retornar el retriever
+    return faiss_index.as_retriever()
+
+EMBEDDINGS = OpenAIEmbeddings(model="text-embedding-3-small")
+CARPETAS_PDF = "C:/Users/Seba/Desktop/Notebooks/Contenidos"
+RETRIEVER = cargar_pdfs_desde_carpeta(CARPETAS_PDF, EMBEDDINGS)
+RETRIEVER_TOOL = create_retriever_tool(
+                RETRIEVER,
+                "Temarios_prueba_PAES",
+                "Recurso para establecer el contenido con los que se van evaluar los conocimientos del alumno, para cada temario.",
+            )
+TOOLS = [RETRIEVER_TOOL]
 
 class UsuarioCreateView(generics.CreateAPIView):
     queryset = Usuario.objects.all()
@@ -133,7 +180,6 @@ class CrearCuestionarioView(TemplateView):
         context = super().get_context_data(**kwargs)
         materias = Materia.objects.all()
         context['materias'] = materias
-        print(context)
         return context
 
 class RetroalimentacionTemplateView(TemplateView):
@@ -143,16 +189,11 @@ class RetroalimentacionTemplateView(TemplateView):
     def dispatch(self, *args, **kwargs):
         return super().dispatch(*args, **kwargs)
 
-    def post(self, request, *args, **kwargs):
-        cuestionario_id = request.POST.get('cuestionario_id')
-        cuestionario = get_object_or_404(Cuestionario, id=cuestionario_id)
-        preguntas = cuestionario.preguntas.all()
-        respuestas = cuestionario.respuestas_usuario.all()
+    def get_respuestas_usuario(self, preguntas, respuestas):
+        """Procesa las respuestas y devuelve una lista detallada y un conteo de errores por tema."""
+        respuestas_usuario = []
+        respuestas_erroneas_por_tema = defaultdict(int)
 
-        respuestas_usuario = []  # Lista para almacenar las respuestas con detalles
-        respuestas_erroneas_por_tema = defaultdict(list)
-
-        # Procesar respuestas del usuario
         for pregunta in preguntas:
             respuesta_usuario = respuestas.filter(pregunta=pregunta).first()
             respuesta_correcta = pregunta.respuestas.filter(es_correcta=True).first()
@@ -160,7 +201,7 @@ class RetroalimentacionTemplateView(TemplateView):
 
             if not es_correcta:
                 tema = pregunta.tema.nombre
-                respuestas_erroneas_por_tema[tema].append(respuesta_usuario)
+                respuestas_erroneas_por_tema[tema] += 1
 
             respuestas_usuario.append({
                 "pregunta": pregunta,
@@ -168,62 +209,107 @@ class RetroalimentacionTemplateView(TemplateView):
                 "es_correcta": es_correcta,
                 "respuesta_correcta": respuesta_correcta.texto_respuesta if respuesta_correcta else "No especificada"
             })
+        
+        return respuestas_usuario, respuestas_erroneas_por_tema
 
-        # Datos para el gráfico
-        temas = list(respuestas_erroneas_por_tema.keys())
-        errores_por_tema = [len(respuestas_erroneas_por_tema[tema]) for tema in temas]
+    def post(self, request, *args, **kwargs):
+        cuestionario_id = request.POST.get('cuestionario_id')
+        cuestionario = get_object_or_404(Cuestionario, id=cuestionario_id)
+        preguntas = cuestionario.preguntas.all()
+        respuestas = cuestionario.respuestas_usuario.all()
+        respuestas_usuario, respuestas_erroneas_por_tema = self.get_respuestas_usuario(preguntas, respuestas)
 
+        # CONVIERTO DICT A JSON PARA TRABAJAR EN JAVASCRIPT (GRAFICO)
+        errores_por_tema_json = json.dumps(respuestas_erroneas_por_tema)
         context = self.get_context_data(
             cuestionario=cuestionario,
             preguntas=preguntas,
             respuestas_usuario=respuestas_usuario,
-            temas=mark_safe(json.dumps(temas)),
-            errores_por_tema=mark_safe(json.dumps(errores_por_tema))
+            errores_por_tema=errores_por_tema_json,
+            errores_por_tema_tabla=dict(respuestas_erroneas_por_tema)
         )
 
         return self.render_to_response(context)
 
 
-def cargar_pdfs_desde_carpeta(carpeta, embeddings_model):
-    todos_los_documentos = []
+class RetroPreguntaTemplateView(TemplateView):
+    template_name = 'retro-pregunta.html'
+    
+    @method_decorator(csrf_exempt)
+    def dispatch(self, *args, **kwargs):
+        return super().dispatch(*args, **kwargs)
+    
+    def post(self, request, *args, **kwargs):
+            # Obtén el ID de la pregunta y la respuesta del usuario desde el POST
+            pregunta_id = request.POST.get('pregunta_id')
+            respuesta_usuario = request.POST.get('respuesta_usuario')
 
-    # Crear una instancia de RecursiveCharacterTextSplitter
-    text_splitter = RecursiveCharacterTextSplitter(
-        chunk_size=1000,  # Tamaño del fragmento
-        chunk_overlap=200  # Superposición entre fragmentos
-    )
+            # Obtener la pregunta y la respuesta correcta
+            pregunta = get_object_or_404(Pregunta, id=pregunta_id)
+            materia = pregunta.materia
+            respuesta_correcta = pregunta.respuestas.get(es_correcta=True).texto_respuesta
 
-    # Recorrer todos los archivos de la carpeta
-    for archivo in os.listdir(carpeta):
-        if archivo.endswith(".pdf"):
-            ruta_completa = os.path.join(carpeta, archivo)
-            print(f"Cargando {ruta_completa}")
+            prompt = ChatPromptTemplate.from_messages(
+                    [
+                        (
+                            "system",
+                            """Eres un profesor de enseñanza media preparando alumnos para la evaluación PAES de Chile. Un alumno te entrega una pregunta con la respuesta correcta, y lo que respondio el alumno.
+                            Indicale al alumno porque se equivoca, y formula 3 preguntas de dos alternativas, orientadas a la pregunta del estudiante.
+                            [
+                    {{
+                        {{"comentario":"texto_comentario",
+                        "preguntas":[
+                        "pregunta": "Texto de la pregunta",
+                        "tema":"tema correspondiente",
+                        "opciones": [
+                            {{"texto": "Opción 1", "es_correcta": null}},
+                            {{"texto": "Opción 2", "es_correcta": null}}
+                        ],
+                        "pregunta": "Texto de la pregunta",
+                        "tema":"tema correspondiente",
+                        "opciones": [
+                            {{"texto": "Opción 1", "es_correcta": null}},
+                            {{"texto": "Opción 2", "es_correcta": null}}
+                        ],
+                        "pregunta": "Texto de la pregunta",
+                        "tema":"tema correspondiente",
+                        "opciones": [
+                            {{"texto": "Opción 1", "es_correcta": null}},
+                            {{"texto": "Opción 2", "es_correcta": null}}]
+                        
+                        }}
+                        ]
+                    }},
+                    ...
+                ]"""
+                        ),
+                        (
+                "human",
+                f"Pregunta:{pregunta}, Respuesta correcta: {respuesta_correcta}, Respuesta alumno: {respuesta_usuario}. ENTREGA SOLO' EN FORMATO JSON"
+            ),
+                        MessagesPlaceholder(variable_name="agent_scratchpad"),
+                    ]
+                )
 
-            # Cargar y dividir el PDF en páginas
-            loader = PyPDFLoader(ruta_completa)
-            paginas = loader.load_and_split()
+            seed = int(time.time())
+            model = ChatOpenAI(temperature=0.3, model="gpt-4o", seed=seed)
+            agent = create_openai_tools_agent(model, TOOLS, prompt)
+            agent_executor = AgentExecutor(agent=agent, tools=TOOLS, verbose=True)
+            response = agent_executor.invoke({})
+            output_text = response.get("output", "")
+            clean_output = output_text.replace('```json\n', '').replace('```', '')
+            retroalimentacionData = json.loads(clean_output)
 
-            # Procesar cada página
-            for pagina in paginas:
-                # Verificar que 'pagina' sea un objeto Document
-                if hasattr(pagina, 'page_content'):
-                    # Aplicar el text_splitter a cada página
-                    fragments = text_splitter.split_text(pagina.page_content)
-                    # Crear y agregar objetos Document para cada fragmento
-                    for fragment in fragments:
-                        doc = Document(page_content=fragment, metadata={"source": ruta_completa})
-                        todos_los_documentos.append(doc)
-                else:
-                    print(f"Advertencia: La página no tiene el atributo 'page_content': {pagina}")
+            
 
-    print("Documentos cargados")
-    # Crear el índice vectorial FAISS con todos los documentos combinados
-    faiss_index = FAISS.from_documents(todos_los_documentos, embeddings_model)
-
-    # Retornar el retriever
-    return faiss_index.as_retriever()
-
-
+            # Añadir al contexto para el template
+            context = {
+                'pregunta': pregunta,
+                'respuesta_usuario': respuesta_usuario,
+                'respuesta_correcta': respuesta_correcta,
+                'retroalimentacion':retroalimentacionData
+            }
+            return self.render_to_response(context)
 
 #POST PARA CREAR PREGUNTAS
 @csrf_exempt
@@ -235,13 +321,6 @@ def crear_preguntas(request):
             materia = Materia.objects.get(nombre=request.POST.get("materia"))
             #Temas de la materia especifico
             temas = materia.tema.all()
-
-            # Ruta a la carpeta con los PDFs
-            carpeta_pdfs = "C:/Users/Seba/Desktop/Notebooks/Contenidos"
-
-            # Crear embeddings
-            embeddings = OpenAIEmbeddings(model="text-embedding-3-small")
-            retriever = cargar_pdfs_desde_carpeta(carpeta_pdfs, embeddings)
             temarios = ', '.join([tema.nombre for tema in temas])
 
             # Definir el prompt
@@ -273,21 +352,12 @@ def crear_preguntas(request):
                 ]
             )
 
-            # Crear herramientas y ejecutar el agente
-            retriever_tool = create_retriever_tool(
-                retriever,
-                "Temarios_prueba_PAES",
-                "Recurso para establecer el contenido con los que se van evaluar los conocimientos del alumno, para cada temario.",
-            )
-
-            tools = [retriever_tool]
             seed = int(time.time())
             model = ChatOpenAI(temperature=0, model="gpt-4o", seed=seed)
-            agent = create_openai_tools_agent(model, tools, prompt)
-            agent_executor = AgentExecutor(agent=agent, tools=tools, verbose=True)
+            agent = create_openai_tools_agent(model, TOOLS, prompt)
+            agent_executor = AgentExecutor(agent=agent, tools=TOOLS, verbose=True)
 
             # Ejecutar la consulta
-            print(temarios)
             response = agent_executor.invoke({})
             
             output_text = response.get("output", "")
@@ -295,16 +365,12 @@ def crear_preguntas(request):
             # El JSON limpio
             clean_output = output_text.replace('```json\n', '').replace('```', '')
             preguntas_data = json.loads(clean_output)
-            print("Preguntas frescas en vista:")
-            print(preguntas_data)
 
             preguntas_guardadas = []
 
             materia_nombre = materia.nombre
 
             for pregunta_data in preguntas_data:
-                print(pregunta_data)
-                print(pregunta_data["tema"])
                 tema = Tema.objects.get(nombre=pregunta_data["tema"])
                 # Crear la pregunta
                 pregunta = Pregunta.objects.create(
@@ -343,10 +409,6 @@ def crear_preguntas(request):
 
                 preguntas_guardadas.append(pregunta_json)
 
-            
-            print("Preguntas guardadas")
-            print(preguntas_guardadas)
-            
             # Guardar las preguntas en la sesión
             request.session['preguntas_guardadas'] = preguntas_guardadas
 
@@ -357,20 +419,11 @@ def crear_preguntas(request):
     else:
         return JsonResponse({"error": "Método de solicitud no permitido."}, status=405)
 
-
-
 def historial_usuario(request):
-    print("=====================================")
-    print("ACCEDIENDO A HISTORIAL USUARIO")
-    print("=====================================")
-    
     try:
-        # Debug inicial
-        print("=== Iniciando historial_usuario ===")
-        
         # Verificar cuestionarios en la base de datos
         cuestionarios = Cuestionario.objects.all()
-        print(f"Cantidad de cuestionarios en BD: {cuestionarios.count()}")
+
         
         # Obtener datos crudos antes de convertir a lista
         datos_crudos = list(cuestionarios.values())
@@ -378,20 +431,10 @@ def historial_usuario(request):
         # Ahora convertimos a lista para la iteración
         cuestionarios = list(cuestionarios)
         
-        # Verificar cada cuestionario
-        for c in cuestionarios:
-            print(f"""
-                ID: {c.id}
-                Título: {c.titulo}
-                Descripción: {c.descripcion}
-                Materia: {c.materia}
-                Preguntas: {c.preguntas.count()}
-            """)
         
         # Serialización
         serializer = CuestionarioSerializer(cuestionarios, many=True)
         datos_serializer = serializer.data
-        print("Datos serializados:", datos_serializer)
         
         context = {
             'cuestionarios': datos_serializer,
@@ -400,15 +443,9 @@ def historial_usuario(request):
             'datos_crudos': datos_crudos  # Usamos los datos crudos que obtuvimos antes
         }
         
-        print("Context enviado al template:", context)
-        
         return render(request, 'historial.html', context)
     except Exception as e:
-        print(f"Error en historial_usuario: {str(e)}")
-        import traceback
-        print(traceback.format_exc())
         return JsonResponse({'error': str(e)}, status=500)
-
 
 @csrf_exempt
 def retro(request):
@@ -419,7 +456,6 @@ def retro(request):
             respuesta_usuario = request.POST.get("respuesta_usuario")
             respuesta_correcta = request.POST.get("respuesta_correcta")
             materia = request.POST.get("materia")
-            print(pregunta,respuesta_usuario,respuesta_correcta,materia)
             
             carpeta_pdfs = "C:/Users/Seba/Desktop/Notebooks/Contenidos"
 
@@ -457,7 +493,6 @@ def retro(request):
             response = agent_executor.invoke({})
             
             output_text = response.get("output", "")
-            print(output_text)
 
             return render(request, 'pregunta.html', {"output_text": output_text})
 
@@ -473,7 +508,6 @@ def comentario_cuestionario(request):
         try:
             data = json.loads(request.body)
             cuestionario_id = data.get("cuestionario_id")
-            print(cuestionario_id)
             cuestionario = Cuestionario.objects.get(id=cuestionario_id)
             materia = cuestionario.materia
 
@@ -498,18 +532,16 @@ def comentario_cuestionario(request):
             )
 
 
-            # Crear embeddings y cargar retriever para el contexto
-            carpeta_pdfs = "C:/Users/Seba/Desktop/Notebooks/Contenidos"
-            embeddings = OpenAIEmbeddings(model="text-embedding-3-small")
-            retriever = cargar_pdfs_desde_carpeta(carpeta_pdfs, embeddings)
+            
+            
 
             # Definir el prompt con las respuestas incorrectas y el contexto
             prompt = ChatPromptTemplate.from_messages(
                 [
                     (
                         "system",
-                        f"""Eres un profesor experto en {materia} para la evaluación PAES de Chile. 
-                        A continuación se te entregan algunas preguntas incorrectas del cuestionario del usuario.
+                        f"""Eres un profesor experto en {materia} preparando alumnos para la evaluación PAES de Chile. 
+                        A continuación se te entregan algunas preguntas incorrectas del cuestionario de un estudiante.
                         Proporciona recomendaciones y sugerencias específicas para ayudar al estudiante a comprender sus errores 
                         y mejorar en el tema.
                         """),
@@ -522,22 +554,12 @@ def comentario_cuestionario(request):
                 ]
             )
 
-            # Crear herramientas y ejecutar el agente
-            retriever_tool = create_retriever_tool(
-                retriever,
-                "Temarios_prueba_PAES",
-                "Recurso para establecer el contenido con los que se van evaluar los conocimientos del alumno, para cada temario.",
-            )
-
-            tools = [retriever_tool]
             seed = int(time.time())
-            model = ChatOpenAI(temperature=0.3, model="gpt-4o", seed=seed, max_tokens=300)
-            agent = create_openai_tools_agent(model, tools, prompt)
-            agent_executor = AgentExecutor(agent=agent, tools=tools, verbose=True)
+            model = ChatOpenAI(temperature=0.3, model="gpt-4o", seed=seed)
+            agent = create_openai_tools_agent(model, TOOLS, prompt)
+            agent_executor = AgentExecutor(agent=agent, tools=TOOLS, verbose=False)
             response = agent_executor.invoke({})
-            
             output_text = response.get("output", "")
-            print(output_text)
 
             return JsonResponse({"output": output_text})
 
