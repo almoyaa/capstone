@@ -1,8 +1,5 @@
 from django.urls import path
-from .views import UsuarioCreateView, CuestionarioCreateView, UsuarioAllView, CuestionarioAllView, PreguntaCreateView, PreguntaAllView, crear_preguntas, MateriaListView, CuestionarioListView, historial_usuario, HistorialTemplateView, retro, comentario_cuestionario
-
-#URL para llamados API
-
+from .views import UsuarioCreateView, CuestionarioCreateView, UsuarioAllView, CuestionarioAllView, PreguntaCreateView, PreguntaAllView, crear_preguntas, MateriaListView, CuestionarioListView, historial_usuario, HistorialTemplateView, retro, comentario_cuestionario, obtener_progreso
 
 urlpatterns = [
     path('crear-usuario/', UsuarioCreateView.as_view(), name='crear-usuario'),
@@ -16,5 +13,6 @@ urlpatterns = [
     path('cuestionarios/<int:usuario_id>/', CuestionarioListView.as_view(), name='cuestionarios-usuario'),
     path('historial/', historial_usuario, name='historial-datos'),
     path('retro/',retro, name='crear-retro'),
-    path('comentario_cuestionario',comentario_cuestionario,name='comentario_cuestionario')
+    path('comentario_cuestionario',comentario_cuestionario,name='comentario_cuestionario'),
+    path('progreso/', obtener_progreso, name='obtener-progreso'),
 ]
