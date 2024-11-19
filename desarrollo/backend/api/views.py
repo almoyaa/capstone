@@ -595,7 +595,7 @@ def obtener_progreso(request):
                 materia_obj = Materia.objects.get(nombre=materia)
                 cuestionarios = Cuestionario.objects.filter(
                     materia=materia_obj,
-                    preguntas_correctas__isnull=False,
+                    respuestas_correctas__isnull=False,
                     fecha_realizacion__isnull=False
                 ).order_by('fecha_realizacion')
             
@@ -613,9 +613,9 @@ def obtener_progreso(request):
                     continue  # Saltar este cuestionario si no cumple con la cantidad
 
                 # Contar respuestas correctas
-                total_preguntas_correctas = cuestionario.preguntas_correctas
+                total_preguntas_correctas = cuestionario.respuestas_correctas
                 
-                resultados.append(total_preguntas_correctas)  # Guardar solo las respuestas correctas
+                resultados.append(respuestas_correctas)  # Guardar solo las respuestas correctas
                 fechas.append(cuestionario.fecha_realizacion.strftime('%Y-%m-%d'))
             
             # Generar valores del eje Y según la cantidad seleccionada
