@@ -21,3 +21,8 @@ desarrollo/backend/.env
 /desarrollo/backend/api/__pycache__/
 
 /desarrollo/backend/api/migrations/*
+desarrollo/backend/api/__pycache__/models.cpython-310.pyc
+desarrollo/backend/api/__pycache__/urls.cpython-310.pyc
+desarrollo/backend/api/__pycache__/views.cpython-310.pyc
+desarrollo/backend/backend/__pycache__/settings.cpython-310.pyc
+desarrollo/backend/backend/__pycache__/urls.cpython-310.pyc
