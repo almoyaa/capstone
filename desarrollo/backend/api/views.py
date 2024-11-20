@@ -580,24 +580,17 @@ def comentario_cuestionario(request):
 @csrf_exempt
 def obtener_progreso(request):
     if request.method == 'GET':
+        print(request)
         try:
             materia = request.GET.get('materia')
+
             cantidad = int(request.GET.get('cantidad', 5))
             
-            # Verificar si es una materia de Ciencias
-            if materia in ['Física', 'Química', 'Biología']:
-                tema = Tema.objects.get(nombre=materia)
-                cuestionarios = Cuestionario.objects.filter(
-                    tema=tema,
-                    fecha_realizacion__isnull=False
-                ).order_by('fecha_realizacion')
-            else:
-                materia_obj = Materia.objects.get(nombre=materia)
-                cuestionarios = Cuestionario.objects.filter(
-                    materia=materia_obj,
-                    respuestas_correctas__isnull=False,
-                    fecha_realizacion__isnull=False
-                ).order_by('fecha_realizacion')
+            print(materia)
+            cuestionarios = Cuestionario.objects.filter(
+                    materia=materia,
+                    fecha_creacion__isnull=False
+                ).order_by('fecha_creacion')
             
             print(f"Cuestionarios encontrados para {materia}: {cuestionarios.count()}")
             
@@ -615,8 +608,8 @@ def obtener_progreso(request):
                 # Contar respuestas correctas
                 total_preguntas_correctas = cuestionario.respuestas_correctas
                 
-                resultados.append(respuestas_correctas)  # Guardar solo las respuestas correctas
-                fechas.append(cuestionario.fecha_realizacion.strftime('%Y-%m-%d'))
+                resultados.append(total_preguntas_correctas)  # Guardar solo las respuestas correctas
+                fechas.append(cuestionario.fecha_creacion.strftime('%Y-%m-%d'))
             
             # Generar valores del eje Y según la cantidad seleccionada
             if cantidad <= 10:
