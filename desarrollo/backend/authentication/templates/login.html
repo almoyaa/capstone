@@ -1,0 +1,22 @@
+{% extends "authentication/base.html" %}
+
+{% block title %}Iniciar sesión{% endblock %}
+
+{% block content %}
+<h2 class="text-center">Iniciar sesión</h2>
+<form method="post">
+    {% csrf_token %}
+    <div class="mb-3">
+        <label for="email" class="form-label">Correo electrónico</label>
+        <input type="text" class="form-control" id="email" name="email" required>
+    </div>
+    <div class="mb-3">
+        <label for="password" class="form-label">Contraseña</label>
+        <input type="password" class="form-control" id="password" name="password" required>
+    </div>
+    <button type="submit" class="btn btn-primary w-100">Iniciar sesión</button>
+</form>
+<p class="text-center mt-3">
+    ¿No tienes una cuenta? <a href="{% url 'signup' %}">Regístrate aquí</a>
+</p>
+{% endblock %}

@@ -17,25 +17,26 @@
     <div class="dashboard-container">
         <div class="filters-section">
             <h2>Filtros</h2>
-            
-            <div class="filter-group">
-                <label for="materia">Materia:</label>
-                <select id="materia" class="filter-select" name="materia" aria-label="Seleccionar Materia">
-                    <option value="" disabled selected hidden>Materias</option>
-                    {% for materia in materias %}
-                    <option value="{{materia}}">{{materia}}</option>
-                    {% endfor %}
-                </select>
-            </div>
-
-            <div class="filter-group">
-                <label for="cantidad">Cantidad de preguntas:</label>
-                <select id="cantidad" class="filter-select">
-                    <option value="5">5 preguntas</option>
-                    <option value="10">10 preguntas</option>
-                    <option value="15">15 preguntas</option>
-                    <option value="20">20 preguntas</option>
-                </select>
+            <div class='row'>
+                <div class="filter-group col-md-6">
+                    <label for="materia">Materia:</label>
+                    <select id="materia" class="filter-select" name="materia" aria-label="Seleccionar Materia">
+                        <option value="" disabled selected hidden>Materias</option>
+                        {% for materia in materias %}
+                        <option value="{{materia}}">{{materia}}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+    
+                <div class="filter-group col-md-6">
+                    <label for="cantidad">Cantidad de preguntas:</label>
+                    <select id="cantidad" class="filter-select">
+                        <option value="5">5 preguntas</option>
+                        <option value="10">10 preguntas</option>
+                        <option value="15">15 preguntas</option>
+                        <option value="20">20 preguntas</option>
+                    </select>
+                </div>
             </div>
         </div>
 

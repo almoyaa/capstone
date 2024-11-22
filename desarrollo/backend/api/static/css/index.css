@@ -1,14 +1,15 @@
 .dashboard-container {
+    width: 90%;
     max-width: 1200px;
     margin: 2rem auto;
     padding: 1rem;
-    background-color: #f5f5f5;
+    background-color: #ffffffbf;
     border-radius: 8px;
     box-shadow: 0 2px 4px rgba(0,0,0,0.1);
 }
 
 .filters-section {
-    background-color: white;
+    background-color: #ffffffc4;
     padding: 1.5rem;
     border-radius: 8px;
     margin-bottom: 2rem;
@@ -77,12 +78,12 @@
     display: none;
 }
 
-/* Responsive */
+/* Responsivo */
 @media (max-width: 768px) {
-    .dashboard-container {
+    /* .dashboard-container {
         margin: 1rem;
         padding: 0.5rem;
-    }
+    } */
 
     .chart-container {
         height: 300px;
