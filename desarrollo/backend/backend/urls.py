@@ -6,6 +6,7 @@ from api.views import IndexTemplateView, PreguntaTemplateView, CrearCuestionario
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('api/', include('api.urls')),  # Incluye las URLs de la aplicación `api`
+    path('auth/', include('authentication.urls')),
     path('', IndexTemplateView.as_view(), name='index-page'),
     path('pregunta/', PreguntaTemplateView.as_view(), name='mostrar-pregunta'),
     path('crear-cuestionario/', CrearCuestionarioView.as_view(), name='crear-cuestionario'),
