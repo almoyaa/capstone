@@ -4,33 +4,31 @@ import openai
 import time
 from datetime import datetime
 from collections import defaultdict
-from django.shortcuts import render
-from django.shortcuts import get_object_or_404
-from django.shortcuts import redirect
-from rest_framework import generics
+from random import randrange
+from dotenv import load_dotenv
+
+from django.shortcuts import render, get_object_or_404, redirect
+from rest_framework import generics, status
 from rest_framework.response import Response
-from rest_framework import status
-from .models import Usuario, Cuestionario, Pregunta, Respuesta, Materia, Tema, Conocimiento
-from .serializers import UsuarioSerializer, CuestionarioSerializer, PreguntaSerializer, MateriaSerializer
 from django.utils.decorators import method_decorator
+from django.utils.safestring import mark_safe
 from django.views.decorators.csrf import csrf_exempt
+from django.views.generic import TemplateView
 from django.conf import settings
 from django.http import JsonResponse
-from dotenv import load_dotenv
-from django.views.generic import TemplateView
-from django.utils.safestring import mark_safe
+from django.db.models import Count
+
+from .models import Usuario, Cuestionario, Pregunta, Respuesta, Materia, Tema, Conocimiento
+from .serializers import UsuarioSerializer, CuestionarioSerializer, PreguntaSerializer, MateriaSerializer
 
 
-
-from langchain_openai import OpenAIEmbeddings
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain_community.document_loaders import PyPDFLoader
 from langchain_community.vectorstores import FAISS
 from langchain.schema import Document  
-from langchain_core.prompts import ChatPromptTemplate
-from langchain_core.prompts import MessagesPlaceholder
+from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 from langchain.tools.retriever import create_retriever_tool
-from langchain_openai import ChatOpenAI
+from langchain_openai import ChatOpenAI, OpenAIEmbeddings
 from langchain.agents import AgentExecutor, create_openai_tools_agent
 
 load_dotenv()
@@ -224,6 +222,11 @@ class RetroalimentacionTemplateView(TemplateView):
         respuestas = cuestionario.respuestas_usuario.all()
         respuestas_usuario, respuestas_erroneas_por_tema = self.get_respuestas_usuario(preguntas, respuestas)
 
+        respuestas_correctas = sum(1 for respuesta in respuestas if respuesta.es_correcta)
+        respuestas_incorrectas = len(respuestas) - respuestas_correctas
+
+
+
         # CONVIERTO DICT A JSON PARA TRABAJAR EN JAVASCRIPT (GRAFICO)
         errores_por_tema_json = json.dumps(respuestas_erroneas_por_tema)
         context = self.get_context_data(
@@ -231,7 +234,11 @@ class RetroalimentacionTemplateView(TemplateView):
             preguntas=preguntas,
             respuestas_usuario=respuestas_usuario,
             errores_por_tema=errores_por_tema_json,
-            errores_por_tema_tabla=dict(respuestas_erroneas_por_tema)
+            errores_por_tema_tabla=dict(respuestas_erroneas_por_tema),
+            grafico_data={
+                "labels": ["Correctas", "Incorrectas"],
+                "data": [respuestas_correctas, respuestas_incorrectas],
+            },
         )
 
         return self.render_to_response(context)
@@ -322,61 +329,87 @@ def crear_preguntas(request):
     if request.method == 'POST':
         try:
             # Extraer los parámetros de la solicitud
-            cantidad = request.POST.get("cantidad")
-            materia = Materia.objects.get(nombre=request.POST.get("materia"))
-            #Temas de la materia especifico
+            cantidad = int(request.POST.get("cantidad"))
+            materia_nombre = request.POST.get("materia")
+            materia = Materia.objects.get(nombre=materia_nombre)
+
+            # Recuperar los temas asociados a la materia
             temas = materia.tema.all()
             temarios = ', '.join([tema.nombre for tema in temas])
 
-            # Definir el prompt
-            prompt = ChatPromptTemplate.from_messages(
-                [
-                    (
-                        "system",
-                        """Eres un profesor experto en la evaluación PAES Chile, y los alumnos vienen a solicitarte preguntas de 5 alternativas para poner a prueba sus conocimientos, de gran dificultad. Además de conocer los contenidos del temario de cada evaluación, solo entrega json, nada más de texto, solo json.
-                        [
-                {{
-                    "pregunta": "Texto de la pregunta",
-                    "tema":"tema correspondiente",
-                    "opciones": [
-                        {{"texto": "Opción 1", "es_correcta": null}},
-                        {{"texto": "Opción 2", "es_correcta": null}},
-                        {{"texto": "Opción 3", "es_correcta": null}},
-                        {{"texto": "Opción 4", "es_correcta": null}},
-                        {{"texto": "Opción 5", "es_correcta": null}}
-                    ]
-                }},
-                ...
-            ]"""
-                    ),
-                    (
-            "human",
-            f"Dame preguntas {cantidad} en formato JSON de los siguientes temarios: {temarios}."
-        ),
-                    MessagesPlaceholder(variable_name="agent_scratchpad"),
-                ]
-            )
+            # **Buscar preguntas similares en el historial con embeddings**
+            preguntas_existentes = Pregunta.objects.filter(materia=materia)
+            historial_preguntas = [
+                {"pregunta": pregunta.texto_pregunta, "tema": pregunta.tema.nombre}
+                for pregunta in preguntas_existentes
+            ]
 
+            # Crear embeddings para las preguntas existentes
+            historial_textos = [pregunta["pregunta"] for pregunta in historial_preguntas]
+            historial_embeddings = EMBEDDINGS.embed_documents(historial_textos)
+            print("HISTORIAL_EMBEDDINGS")
+            print(historial_embeddings)
+
+            # Construcción del prompt
+            prompt = ChatPromptTemplate.from_messages([
+                (
+                    "system",
+                    """Eres un profesor experto en la evaluación PAES Chile. Los alumnos vienen a solicitarte preguntas de 5 alternativas, 
+                    con alta dificultad. No repitas preguntas similares al historial proporcionado. Responde en formato JSON únicamente.
+                    [
+                        {{
+                            "pregunta": "Texto de la pregunta",
+                            "tema": "Tema correspondiente",
+                            "opciones": [
+                                {{"texto": "Opción 1", "es_correcta": null}},
+                                {{"texto": "Opción 2", "es_correcta": null}},
+                                {{"texto": "Opción 3", "es_correcta": null}},
+                                {{"texto": "Opción 4", "es_correcta": null}},
+                                {{"texto": "Opción 5", "es_correcta": null}}
+                            ]
+                        }},
+                        ...
+                    ]
+                    """
+                ),
+                (
+                    "human",
+                    f"""Dame {cantidad} preguntas en formato JSON de los siguientes temarios: {temarios}.
+                    Aquí tienes un historial de preguntas previas para no repetir:
+                    {json.dumps(historial_preguntas)}"""
+                ),
+                MessagesPlaceholder(variable_name="agent_scratchpad"),
+            ])
+
+            # Configuración del modelo y agente
             seed = int(time.time())
-            model = ChatOpenAI(temperature=0, model="gpt-4o", seed=seed)
+            model = ChatOpenAI(temperature=0, model="gpt-4", seed=seed)
             agent = create_openai_tools_agent(model, TOOLS, prompt)
             agent_executor = AgentExecutor(agent=agent, tools=TOOLS, verbose=True)
 
-            # Ejecutar la consulta
-            response = agent_executor.invoke({})
-            
+            # Ejecución del agente
+            response = agent_executor.invoke({})  # Ejecutar consulta al agente
             output_text = response.get("output", "")
 
-            # El JSON limpio
+            # Limpiar y procesar el JSON recibido
             clean_output = output_text.replace('```json\n', '').replace('```', '')
             preguntas_data = json.loads(clean_output)
 
             preguntas_guardadas = []
 
-            materia_nombre = materia.nombre
-
+            # Guardar preguntas en la base de datos
             for pregunta_data in preguntas_data:
                 tema = Tema.objects.get(nombre=pregunta_data["tema"])
+
+                # Verificar similitud con embeddings antes de guardar
+                nueva_pregunta_embedding = EMBEDDINGS.embed_query(pregunta_data["pregunta"])
+                es_similar = any(
+                    similarity(nueva_pregunta_embedding, embedding) > 0.85
+                    for embedding in historial_embeddings
+                )
+                if es_similar:
+                    continue  # Saltar preguntas similares
+
                 # Crear la pregunta
                 pregunta = Pregunta.objects.create(
                     texto_pregunta=pregunta_data["pregunta"],
@@ -392,42 +425,42 @@ def crear_preguntas(request):
                         pregunta=pregunta
                     )
 
-                # Preparar los datos de las respuestas
+                # Agregar la pregunta y sus respuestas al JSON final
                 respuestas = [
                     {
                         "id": respuesta.id,
                         "texto_respuesta": respuesta.texto_respuesta,
-                        "es_correcta": respuesta.es_correcta
+                        "es_correcta": respuesta.es_correcta,
                     }
                     for respuesta in pregunta.respuestas.all()
                 ]
 
-                # Formar el JSON de la pregunta
                 pregunta_json = {
                     "id": pregunta.id,
                     "texto_pregunta": pregunta.texto_pregunta,
-                    "materia": pregunta.materia.nombre,
-                    "tema":pregunta.tema.nombre,
+                    "materia": materia_nombre,
+                    "tema": tema.nombre,
                     "respuestas": respuestas
                 }
-                
 
                 preguntas_guardadas.append(pregunta_json)
 
-            # Guardar las preguntas en la sesión
+            # Guardar las preguntas generadas en la sesión
             request.session['preguntas_guardadas'] = preguntas_guardadas
 
-            return render(request, 'pregunta.html', {'preguntas_json': mark_safe(json.dumps(preguntas_guardadas))})
+            # Renderizar la plantilla con las preguntas
+            return render(request, 'pregunta.html', {'preguntas_json': json.dumps(preguntas_guardadas)})
 
         except Exception as e:
             return JsonResponse({"error": str(e)}, status=500)
     else:
         return JsonResponse({"error": "Método de solicitud no permitido."}, status=405)
 
+
 def historial_usuario(request):
     try:
         # Verificar cuestionarios en la base de datos
-        cuestionarios = Cuestionario.objects.all()
+        cuestionarios = Cuestionario.objects.all().order_by('-fecha_creacion')
 
         
         # Obtener datos crudos antes de convertir a lista
@@ -461,13 +494,6 @@ def retro(request):
             respuesta_usuario = request.POST.get("respuesta_usuario")
             respuesta_correcta = request.POST.get("respuesta_correcta")
             materia = request.POST.get("materia")
-            
-            carpeta_pdfs = "C:/Users/Seba/Desktop/Notebooks/Contenidos"
-
-            # Crear embeddings
-            embeddings = OpenAIEmbeddings(model="text-embedding-3-small")
-            retriever = cargar_pdfs_desde_carpeta(carpeta_pdfs, embeddings)
-
             # Definir el prompt
             prompt = ChatPromptTemplate.from_messages(
                 [
@@ -483,18 +509,11 @@ def retro(request):
                 ]
             )
 
-            # Crear herramientas y ejecutar el agente
-            retriever_tool = create_retriever_tool(
-                retriever,
-                "Temarios_prueba_PAES",
-                "Recurso para establecer el contenido con los que se van evaluar los conocimientos del alumno, para cada temario.",
-            )
 
-            tools = [retriever_tool]
             seed = int(time.time())
             model = ChatOpenAI(temperature=0.3, model="gpt-4o", seed=seed)
-            agent = create_openai_tools_agent(model, tools, prompt)
-            agent_executor = AgentExecutor(agent=agent, tools=tools, verbose=True)
+            agent = create_openai_tools_agent(model, TOOLS, prompt)
+            agent_executor = AgentExecutor(agent=agent, tools=TOOLS, verbose=True)
             response = agent_executor.invoke({})
             
             output_text = response.get("output", "")
@@ -633,3 +652,109 @@ def obtener_progreso(request):
             print(traceback.format_exc())
             return JsonResponse({'error': str(e)}, status=500)
 
+
+
+def get_chart(request):
+    # Filtrar los cuestionarios de la materia "Biología"
+    cuestionarios = Cuestionario.objects.filter(
+        materia='Biología',
+        fecha_creacion__isnull=False
+    ).order_by('fecha_creacion')
+
+    if not cuestionarios.exists():
+        return JsonResponse({'error': 'No hay cuestionarios disponibles para la materia seleccionada.'}, status=404)
+
+    # Eje X: Fechas de creación de los cuestionarios
+    xAxis_data = [cuestionario.fecha_creacion.strftime('%Y-%m-%d') for cuestionario in cuestionarios]
+    print(xAxis_data)
+
+    # Inicializar datos para el gráfico
+    temas = set()  # Para rastrear todos los temas únicos
+    series_data = {}
+
+    for cuestionario in cuestionarios:
+        for pregunta in cuestionario.preguntas.all():
+            tema_nombre = pregunta.tema.nombre if pregunta.tema else "Sin tema"
+            temas.add(tema_nombre)
+
+            # Contar respuestas incorrectas
+            incorrectas = cuestionario.respuestas_usuario.filter(
+                pregunta=pregunta, es_correcta=False
+            ).count()
+
+            correctas = cuestionario.respuestas_usuario.filter(
+                pregunta=pregunta, es_correcta=True
+            ).count()
+
+            if tema_nombre not in series_data:
+                series_data[tema_nombre] = []
+
+            series_data[tema_nombre].append(correctas)
+
+    # Asegurar que cada serie tenga la misma longitud que el eje X
+    for tema in temas:
+        if tema not in series_data:
+            series_data[tema] = [0] * len(xAxis_data)
+        else:
+            # Rellenar con ceros si falta información
+            while len(series_data[tema]) < len(xAxis_data):
+                series_data[tema].append(0)
+
+    # Formatear los datos para las series en ECharts
+    formatted_series = []
+    for tema, data in series_data.items():
+        formatted_series.append({
+            'name': tema,
+            'type': 'line',
+            'stack': 'Total',
+            'areaStyle': {},
+            'emphasis': {
+                'focus': 'series'
+            },
+            'data': data
+        })
+
+    # Crear el JSON del gráfico
+    chart = {
+        'title': {
+            'text': 'Preguntas Erróneas por Cuestionarios'
+        },
+        'tooltip': {
+            'trigger': 'axis',
+            'axisPointer': {
+                'type': 'cross',
+                'label': {
+                    'backgroundColor': '#6a7985'
+                }
+            }
+        },
+        'legend': {
+            'data': list(temas)
+        },
+        'toolbox': {
+            'feature': {
+                'saveAsImage': {}
+            }
+        },
+        'grid': {
+            'left': '3%',
+            'right': '4%',
+            'bottom': '3%',
+            'containLabel': True
+        },
+        'xAxis': [
+            {
+                'type': 'category',
+                'boundaryGap': False,
+                'data': xAxis_data
+            }
+        ],
+        'yAxis': [
+            {
+                'type': 'value'
+            }
+        ],
+        'series': formatted_series
+    }
+
+    return JsonResponse(chart)
