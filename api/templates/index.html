@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard PAES</title>
+    <!-- Asegúrate de que estas bibliotecas estén en este orden -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/moment@2.29.1/moment.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-moment@1.0.1/dist/chartjs-adapter-moment.min.js"></script>
+    {% load static %}
+    <link rel="stylesheet" href="{% static 'css/index.css' %}">
+</head>
+<body>
+    {% include "navbar.html" %}
+    
+    <div class="dashboard-container">
+        <div class="filters-section">
+            <h2>Filtros</h2>
+            <div class='row'>
+                <div class="filter-group col-md-6">
+                    <label for="materia">Materia:</label>
+                    <select id="materia" class="filter-select" name="materia" aria-label="Seleccionar Materia">
+                        <option value="" disabled selected hidden>Materias</option>
+                        {% for materia in materias %}
+                        <option value="{{materia}}">{{materia}}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+    
+                <div class="filter-group col-md-6">
+                    <label for="cantidad">Cantidad de preguntas:</label>
+                    <select id="cantidad" class="filter-select">
+                        <option value="5">5 preguntas</option>
+                        <option value="10">10 preguntas</option>
+                        <option value="15">15 preguntas</option>
+                        <option value="20">20 preguntas</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+
+        <div class="chart-container">
+            <canvas id="progressChart"></canvas>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Inicializar el gráfico
+            const ctx = document.getElementById('progressChart').getContext('2d');
+            let myChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    datasets: [{
+                        label: 'Respuestas Correctas',
+                        data: [],
+                        borderColor: '#4CAF50',
+                        backgroundColor: 'rgba(76, 175, 80, 0.1)',
+                        tension: 0.4,
+                        fill: true
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'top',
+                        },
+                        title: {
+                            display: true,
+                            text: 'Preguntas correctas por cuestionario'
+                        }
+                    },
+                    scales: {
+                        y: {
+                            min: 0,
+                            max: cantidad,
+                            ticks: {
+                                stepSize: cantidad <= 10 ? 1 : 5,
+                                callback: function(value) {
+                                    // Para 5 y 10 preguntas, mostrar todos los números
+                                    if (cantidad <= 10) {
+                                        return value <= cantidad ? value : null;
+                                    }
+                                    // Para 15 y 20 preguntas, mostrar solo múltiplos de 5
+                                    else {
+                                        return value % 5 === 0 && value <= cantidad ? value : null;
+                                    }
+                                }
+                            },
+                            title: {
+                                display: true,
+                                text: 'Cantidad de preguntas correctas'
+                            }
+                        },
+                        x: {
+                            type: 'time',
+                            time: {
+                                unit: 'day',
+                                displayFormats: {
+                                    day: 'DD-MM-YYYY'
+                                }
+                            },
+                            ticks: {
+                                source: 'data',  // Solo mostrar fechas de los datos
+                                maxRotation: 45
+                            },
+                            title: {
+                                display: true,
+                                text: 'Fecha de realización de cuestionario'
+                            }
+                        }
+                    }
+                }
+            });
+
+            // Función para actualizar el gráfico
+            function actualizarGrafico() {
+                const materia = document.getElementById('materia').value;
+                const cantidad = parseInt(document.getElementById('cantidad').value);
+
+                fetch(`/api/progreso/?materia=${materia}&cantidad=${cantidad}`)
+                    .then(response => response.json())
+                    .then(datos => {
+                        console.log("Datos recibidos:", datos);
+
+                        // Crear los puntos de datos para el gráfico
+                        const dataPoints = datos.fechas.map((fecha, index) => ({
+                            x: fecha,
+                            y: datos.resultados[index]
+                        }));
+
+                        // Actualizar los datos del gráfico
+                        myChart.data.datasets[0].data = dataPoints;
+
+                        // Actualizar la configuración del eje Y según la cantidad
+                        myChart.options.scales.y = {
+                            min: 0,
+                            max: cantidad,
+                            ticks: {
+                                stepSize: cantidad <= 10 ? 1 : 5,
+                                callback: function(value) {
+                                    // Para 5 y 10 preguntas, mostrar todos los números
+                                    if (cantidad <= 10) {
+                                        return value <= cantidad ? value : null;
+                                    }
+                                    // Para 15 y 20 preguntas, mostrar solo múltiplos de 5
+                                    else {
+                                        return value % 5 === 0 && value <= cantidad ? value : null;
+                                    }
+                                }
+                            },
+                            title: {
+                                display: true,
+                                text: 'Cantidad de preguntas correctas'
+                            }
+                        };
+
+                        // Forzar la actualización del gráfico
+                        myChart.update('none');
+                    })
+                    .catch(error => {
+                        console.error('Error al actualizar el gráfico:', error);
+                    });
+            }
+
+            // Eventos para los filtros
+            document.getElementById('materia').addEventListener('change', actualizarGrafico);
+            document.getElementById('cantidad').addEventListener('change', actualizarGrafico);
+
+            // Llamar a actualizarGrafico inicialmente
+            //actualizarGrafico();
+        });
+    </script>
+</body>
+</html>

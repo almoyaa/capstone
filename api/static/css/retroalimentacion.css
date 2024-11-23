@@ -1,0 +1,68 @@
+.container-info {
+    display: flex;
+    flex-direction: column;
+}
+
+.sub-container ul li {
+    padding: 7px !important;
+}
+
+.sub-container {
+    display: flex;
+    padding: 15px;
+    border-radius: 15px;
+    background: #95ddf35e;
+}
+
+#pie-chart {
+    width: 400px;
+    height: 400px;
+    margin-left: 180px;
+}
+
+.respuesta-correcta {
+    background-color: #d4edda;
+    /* verde claro */
+    color: #155724;
+    /* verde oscuro */
+    padding: 10px;
+    border-radius: 5px;
+    display: flex;
+}
+
+.respuesta-incorrecta {
+    background-color: #f8d7da;
+    /* rojo claro */
+    color: #721c24;
+    /* rojo oscuro */
+    padding: 10px;
+    border-radius: 5px;
+}
+
+.spinner {
+    width: 40px;
+    height: 40px;
+    border: 5px solid lightgray;
+    border-top: 5px solid #3498db;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    0% {
+        transform: rotate(0deg);
+    }
+
+    100% {
+        transform: rotate(360deg);
+    }
+}
+
+table {
+    min-width: 500px;
+    max-width: 700px;
+}
+
+table td {
+    padding-left: 4px;
+}
