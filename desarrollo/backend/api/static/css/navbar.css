@@ -1,4 +1,4 @@
-/* reset */
+/* Reset */
 * {
     margin: 0;
     padding: 0;
@@ -9,7 +9,6 @@ html, body {
     margin: 0;
     height: 100vh;
     width: 100vw;
-    overflow: hidden;
     font-family: "Roboto", sans-serif;
     background-image: linear-gradient(135deg, #2bbfff 0%, #ff8a0f 100%);
 }
@@ -23,7 +22,7 @@ h1 {
     text-align: center;
 }
 
-/* estilo navbr */
+/* estilo navbar */
 .nav-wrapper {
     display: flex;
     position: relative;
@@ -122,7 +121,7 @@ nav {
     display: none;
 }
 
-/* estilo barra */
+/* estilo sidebar */
 .nav-container {
     display: flex;
     justify-content: center;
