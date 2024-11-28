@@ -8,6 +8,17 @@
     box-shadow: 0 2px 4px rgba(0,0,0,0.1);
 }
 
+.cuestionario-button {
+    margin-right: 70px;
+    max-height: 60px;
+    border: none;
+    background-color: #007bff;
+    color: white;
+    border-radius: 15px;
+    transition: font-size 0.3s ease;
+    padding: 5px;
+}
+
 .filters-section {
     background-color: #ffffffc4;
     padding: 1.5rem;
@@ -88,4 +99,10 @@
     .chart-container {
         height: 300px;
     }
+}
+
+html, body {
+    height: 100%;
+    margin: 0;
+    overflow-y: auto;
 }

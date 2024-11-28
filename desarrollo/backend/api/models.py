@@ -78,6 +78,7 @@ class Pregunta(models.Model):
     texto_pregunta = models.TextField()
     materia = models.ForeignKey('Materia', related_name='Materia', on_delete=models.CASCADE)
     tema = models.ForeignKey("Tema", verbose_name='Tema', on_delete=models.CASCADE, null=True)
+    embedding = models.JSONField(null=True, blank=True)
     def __str__(self):
         return self.texto_pregunta
 
@@ -100,7 +101,7 @@ class Cuestionario(models.Model):
     preguntas = models.ManyToManyField(Pregunta)
     respuestas_correctas = models.IntegerField(null=True, blank=True)
     respuestas_usuario = models.ManyToManyField(Respuesta)
-    fecha_creacion = models.DateTimeField(auto_now_add=True)  # Añadimos este campo
+    fecha_creacion = models.DateTimeField(auto_now_add=True, null=True, blank=True)  # Añadimos este campo
     fecha_realizacion = models.DateTimeField(null=True, blank=True)
 
     def __str__(self):

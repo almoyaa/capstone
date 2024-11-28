@@ -31,6 +31,8 @@ from langchain.tools.retriever import create_retriever_tool
 from langchain_openai import ChatOpenAI, OpenAIEmbeddings
 from langchain.agents import AgentExecutor, create_openai_tools_agent
 
+from sentence_transformers import SentenceTransformer, util
+
 load_dotenv()
 def cargar_pdfs_desde_carpeta(carpeta, embeddings_model):
     todos_los_documentos = []
@@ -79,6 +81,8 @@ RETRIEVER_TOOL = create_retriever_tool(
                 "Recurso para establecer el contenido con los que se van evaluar los conocimientos del alumno, para cada temario.",
             )
 TOOLS = [RETRIEVER_TOOL]
+
+model_embedding = SentenceTransformer('all-MiniLM-L6-v2')
 
 class UsuarioCreateView(generics.CreateAPIView):
     queryset = Usuario.objects.all()
@@ -323,6 +327,16 @@ class RetroPreguntaTemplateView(TemplateView):
             }
             return self.render_to_response(context)
 
+def similarity_sentence_transformers(text1, text2):
+    """
+    Calcula la similitud entre dos textos utilizando Sentence Transformers.
+    """
+    embedding1 = model_embedding.encode(text1, convert_to_tensor=True)
+    embedding2 = model_embedding.encode(text2, convert_to_tensor=True)
+    return util.cos_sim(embedding1, embedding2).item()
+
+
+
 #POST PARA CREAR PREGUNTAS
 @csrf_exempt
 def crear_preguntas(request):
@@ -339,45 +353,43 @@ def crear_preguntas(request):
 
             # **Buscar preguntas similares en el historial con embeddings**
             preguntas_existentes = Pregunta.objects.filter(materia=materia)
-            historial_preguntas = [
-                {"pregunta": pregunta.texto_pregunta, "tema": pregunta.tema.nombre}
-                for pregunta in preguntas_existentes
+            # Obtengo las preguntas "embedeadas" (LISTA POR COMPRESION)
+            historial_embeddings = [
+                pregunta.embedding for pregunta in preguntas_existentes if pregunta.embedding
             ]
 
-            # Crear embeddings para las preguntas existentes
-            historial_textos = [pregunta["pregunta"] for pregunta in historial_preguntas]
-            historial_embeddings = EMBEDDINGS.embed_documents(historial_textos)
-            print("HISTORIAL_EMBEDDINGS")
-            print(historial_embeddings)
+            historial_preguntas = [
+                {
+                    "pregunta": pregunta.texto_pregunta,
+                    "embedding": pregunta.embedding
+                }
+                for pregunta in preguntas_existentes
+            ]
 
             # Construcción del prompt
             prompt = ChatPromptTemplate.from_messages([
                 (
                     "system",
-                    """Eres un profesor experto en la evaluación PAES Chile. Los alumnos vienen a solicitarte preguntas de 5 alternativas, 
+                    f"""Eres un profesor experto en la evaluación PAES Chile. Los alumnos vienen a solicitarte preguntas de 5 alternativas, 
                     con alta dificultad. No repitas preguntas similares al historial proporcionado. Responde en formato JSON únicamente.
                     [
-                        {{
+                        
                             "pregunta": "Texto de la pregunta",
                             "tema": "Tema correspondiente",
                             "opciones": [
-                                {{"texto": "Opción 1", "es_correcta": null}},
-                                {{"texto": "Opción 2", "es_correcta": null}},
-                                {{"texto": "Opción 3", "es_correcta": null}},
-                                {{"texto": "Opción 4", "es_correcta": null}},
-                                {{"texto": "Opción 5", "es_correcta": null}}
+                                "texto": "Opción 1", "es_correcta": null,
+                                "texto": "Opción 2", "es_correcta": null,
+                                "texto": "Opción 3", "es_correcta": null,
+                                "texto": "Opción 4", "es_correcta": null,
+                                "texto": "Opción 5", "es_correcta": null
                             ]
-                        }},
+                        ,
                         ...
                     ]
-                    """
-                ),
-                (
-                    "human",
+                    """),
+                ("human",
                     f"""Dame {cantidad} preguntas en formato JSON de los siguientes temarios: {temarios}.
-                    Aquí tienes un historial de preguntas previas para no repetir:
-                    {json.dumps(historial_preguntas)}"""
-                ),
+                    """),
                 MessagesPlaceholder(variable_name="agent_scratchpad"),
             ])
 
@@ -393,28 +405,53 @@ def crear_preguntas(request):
 
             # Limpiar y procesar el JSON recibido
             clean_output = output_text.replace('```json\n', '').replace('```', '')
-            preguntas_data = json.loads(clean_output)
+            try:
+                preguntas_data = json.loads(clean_output)
+                print("preguntas_data")
+                print(preguntas_data)
+            except json.JSONDecodeError:
+                return JsonResponse({"error": "El modelo devolvió un JSON inválido."}, status=500)
 
             preguntas_guardadas = []
+            preguntas_similares = []  # Lista para almacenar preguntas similares encontradas
+
+            # Instanciamos el modelo de Sentence-Transformer
+            model_embed = SentenceTransformer('all-MiniLM-L6-v2')
 
             # Guardar preguntas en la base de datos
             for pregunta_data in preguntas_data:
                 tema = Tema.objects.get(nombre=pregunta_data["tema"])
 
-                # Verificar similitud con embeddings antes de guardar
-                nueva_pregunta_embedding = EMBEDDINGS.embed_query(pregunta_data["pregunta"])
-                es_similar = any(
-                    similarity(nueva_pregunta_embedding, embedding) > 0.85
-                    for embedding in historial_embeddings
-                )
+                es_similar = False
+                if historial_preguntas:  # Si existen preguntas previas en el historial de la materia selecta.
+                    for historial in historial_preguntas: # Historial_preguntas lista de jsons de la pregunta y embedding correspondiente
+                        similitud = similarity_sentence_transformers(
+                            pregunta_data["pregunta"], historial["pregunta"]
+                        )
+
+                        print("Similitud")
+                        print(similitud)
+                        if similitud > 0.85:  # Umbral de similitud
+                            es_similar = True
+                            print("similituuuuuuuuuud")
+                            preguntas_similares.append({
+                                "pregunta": pregunta_data["pregunta"],
+                                "similitud": similitud
+                            })
+                            break  # Salir del bucle si ya encontramos una pregunta similar
+
                 if es_similar:
                     continue  # Saltar preguntas similares
+
+                # Generar el embedding de la nueva pregunta y convertirlo a lista
+                nueva_pregunta_embedding = model_embed.encode(pregunta_data["pregunta"]).tolist()
 
                 # Crear la pregunta
                 pregunta = Pregunta.objects.create(
                     texto_pregunta=pregunta_data["pregunta"],
                     materia=materia,
-                    tema=tema
+                    tema=tema,
+                    embedding=nueva_pregunta_embedding  # Guardamos el embedding como lista
                 )
 
                 # Crear las opciones de respuesta
@@ -445,6 +482,70 @@ def crear_preguntas(request):
 
                 preguntas_guardadas.append(pregunta_json)
 
+            # Si hay preguntas similares, hacer otra consulta a la API de ChatGPT para completar la cantidad solicitada
+            if len(preguntas_guardadas) < cantidad:
+                print("PIDIENDO PP[REGUNTAS NUEVAS]")
+                preguntas_restantes = cantidad - len(preguntas_guardadas)
+                prompt_historico = f"""Dame {preguntas_restantes} preguntas adicionales en formato JSON, asegurándote de no repetir ninguna pregunta similar a las que ya se han generado o están en el historial de preguntas similares: {json.dumps(preguntas_similares)}"""
+                prompt = ChatPromptTemplate.from_messages([
+                    ("system", prompt_historico),
+                    ("human", f"""Dame {preguntas_restantes} preguntas en formato JSON. Las preguntas deben ser diferentes a las ya generadas."""),
+                    MessagesPlaceholder(variable_name="agent_scratchpad"),
+                ])
+
+                # Nueva ejecución del agente para obtener más preguntas
+                response = agent_executor.invoke({})  # Ejecutar consulta al agente
+                output_text = response.get("output", "")
+                clean_output = output_text.replace('```json\n', '').replace('```', '')
+
+                try:
+                    preguntas_restantes_data = json.loads(clean_output)
+                except json.JSONDecodeError:
+                    return JsonResponse({"error": "El modelo devolvió un JSON inválido."}, status=500)
+
+                # Agregar las preguntas restantes al historial
+                for pregunta_data in preguntas_restantes_data:
+                    tema = Tema.objects.get(nombre=pregunta_data["tema"])
+
+                    # Generar el embedding de la nueva pregunta y convertirlo a lista
+                    nueva_pregunta_embedding = model_embed.encode(pregunta_data["pregunta"]).tolist()
+
+                    # Crear la pregunta
+                    pregunta = Pregunta.objects.create(
+                        texto_pregunta=pregunta_data["pregunta"],
+                        materia=materia,
+                        tema=tema,
+                        embedding=nueva_pregunta_embedding  # Guardamos el embedding como lista
+                    )
+
+                    # Crear las opciones de respuesta
+                    for opcion in pregunta_data["opciones"]:
+                        Respuesta.objects.create(
+                            texto_respuesta=opcion["texto"],
+                            es_correcta=opcion["es_correcta"],
+                            pregunta=pregunta
+                        )
+
+                    # Agregar la pregunta y sus respuestas al JSON final
+                    respuestas = [
+                        {
+                            "id": respuesta.id,
+                            "texto_respuesta": respuesta.texto_respuesta,
+                            "es_correcta": respuesta.es_correcta,
+                        }
+                        for respuesta in pregunta.respuestas.all()
+                    ]
+
+                    pregunta_json = {
+                        "id": pregunta.id,
+                        "texto_pregunta": pregunta.texto_pregunta,
+                        "materia": materia_nombre,
+                        "tema": tema.nombre,
+                        "respuestas": respuestas
+                    }
+
+                    preguntas_guardadas.append(pregunta_json)
+
             # Guardar las preguntas generadas en la sesión
             request.session['preguntas_guardadas'] = preguntas_guardadas
 
@@ -455,6 +556,7 @@ def crear_preguntas(request):
             return JsonResponse({"error": str(e)}, status=500)
     else:
         return JsonResponse({"error": "Método de solicitud no permitido."}, status=405)
+
 
 
 def historial_usuario(request):
@@ -569,8 +671,7 @@ def comentario_cuestionario(request):
                         Proporciona recomendaciones y sugerencias específicas para ayudar al estudiante a comprender sus errores 
                         y mejorar en el tema.
                         """),
-                    (
-                        "human",
+                    ("human",
                         f"Errores en el cuestionario:\n{errores_texto}\n\n"
                         "¿Qué puedo hacer para mejorar mis resultados en base a los errores anteriores?"
                     ),
@@ -758,3 +859,46 @@ def get_chart(request):
     }
 
     return JsonResponse(chart)
+
+
+@csrf_exempt
+def preguntas_faltantes(cantidad, temarios):
+
+    prompt = ChatPromptTemplate.from_messages([
+        (
+            "system",
+                f"""Eres un profesor experto en la evaluación PAES Chile. Los alumnos vienen a solicitarte preguntas de 5 alternativas, 
+                con alta dificultad. No repitas preguntas similares al historial proporcionado. Responde en formato JSON únicamente.
+                [
+                "pregunta": "Texto de la pregunta",
+                "tema": "Tema correspondiente",
+                "opciones": [
+                    "texto": "Opción 1", "es_correcta": null,
+                    "texto": "Opción 2", "es_correcta": null,
+                    "texto": "Opción 3", "es_correcta": null,
+                    "texto": "Opción 4", "es_correcta": null,
+                    "texto": "Opción 5", "es_correcta": null
+                ]
+            ,...
+            ]"""
+        ),
+            ("human",
+                f"""Dame {cantidad} preguntas en formato JSON de los siguientes temarios: {temarios}.
+                """),
+            MessagesPlaceholder(variable_name="agent_scratchpad"),
+        ])
+
+        # Configuración del modelo y agente
+    seed = int(time.time())
+    model = ChatOpenAI(temperature=0, model="gpt-4", seed=seed)
+    agent = create_openai_tools_agent(model, TOOLS, prompt)
+    agent_executor = AgentExecutor(agent=agent, tools=TOOLS, verbose=True)
+
+    # Ejecución del agente
+    response = agent_executor.invoke({})  # Ejecutar consulta al agente
+    output_text = response.get("output", "")
+
+    # Limpiar y procesar el JSON recibido
+    clean_output = output_text.replace('```json\n', '').replace('```', '')
+
+    return clean_output

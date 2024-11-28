@@ -10,7 +10,8 @@
   <!-- Apache ECharts -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/echarts/5.4.1/echarts.min.js"></script>
   <!-- Bootstrap -->
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/css/bootstrap.min.css" integrity="sha384-rbsA2VBKQhggwzxH7pPCaAqO46MgnOM80zW1RWuH61DGLwZJEdK2Kadq2F9CUG65" crossorigin="anonymous" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/css/bootstrap.min.css"
+    integrity="sha384-rbsA2VBKQhggwzxH7pPCaAqO46MgnOM80zW1RWuH61DGLwZJEdK2Kadq2F9CUG65" crossorigin="anonymous" />
 
   <link rel="stylesheet" href="{% static 'css/eGraph.css' %}" />
 </head>
@@ -85,14 +86,30 @@
           <strong>{{ forloop.counter }}. {{ respuesta_data.pregunta.texto_pregunta }}</strong>
         <p><strong>Tema: </strong>{{ respuesta_data.pregunta.tema }}</p>
         </p>
-        <p class="respuesta {% if respuesta_data.es_correcta %}respuesta-correcta{% else %}respuesta-incorrecta{% endif %}">
+        <p
+          class="respuesta {% if respuesta_data.es_correcta %}respuesta-correcta{% else %}respuesta-incorrecta{% endif %}">
           {% if not respuesta_data.es_correcta %}
           <strong>Tu respuesta: </strong> {{ respuesta_data.respuesta_usuario }}<br />
         <form action="{% url 'retro-pregunta' %}" method="post" style="display:inline;">
           {% csrf_token %}
           <input type="hidden" name="pregunta_id" value="{{ respuesta_data.pregunta.id }}">
           <input type="hidden" name="respuesta_usuario" value="{{ respuesta_data.respuesta_usuario }}">
-          <button type="submit">Ver explicación</button>
+          <button style="
+    background-color: #4CAF50; /* Verde atractivo */
+    color: white; /* Texto blanco */
+    border: none; /* Sin borde */
+    padding: 10px 20px; /* Espaciado interno */
+    text-align: center; /* Centrado */
+    text-decoration: none; /* Sin subrayado */
+    display: inline-block; /* Para usar en línea */
+    font-size: 16px; /* Tamaño del texto */
+    border-radius: 5px; /* Bordes redondeados */
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2); /* Sombra */
+    cursor: pointer; /* Cursor de mano */
+    transition: background-color 0.3s ease, transform 0.2s ease; /* Transiciones */
+" onmouseover="this.style.backgroundColor='#45a049'; this.style.transform='scale(1.05)';"
+            onmouseout="this.style.backgroundColor='#4CAF50'; this.style.transform='scale(1)';" type="submit">Ver
+            explicación</button>
         </form>
         {% endif %}
         <strong>Respuesta correcta:</strong> {{ respuesta_data.respuesta_correcta }}
@@ -106,7 +123,7 @@
     <!-- Contenedor de diálogo de retroalimentación -->
     <div id="retroalimentacion-dialogo" style="display: none">
       <textarea rows="4" cols="50" id="retroalimentacion-respuesta"></textarea>
-        
+
     </div>
   </div>
 </body>
@@ -122,7 +139,7 @@
     fetch("{% url 'crear-retro' %}", {
       method: "POST",
       headers: {
-        "X-CSRFToken": "{{ csrf_token }}", 
+        "X-CSRFToken": "{{ csrf_token }}",
       }
     })
       .then((response) => response.json())
@@ -187,47 +204,48 @@
         // Muestra el spinner antes de comenzar el fetch
         document.getElementById("spinner").style.display = "block";
         const erroresPorTema = JSON.parse('{{ errores_por_tema|safe }}');
-        const cuestionarioId = {{ cuestionario.id| safe }};
-        const response = await fetch("{% url 'comentario_cuestionario' %}", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "X-CSRFToken": "{{ csrf_token }}"
-          },
-          body: JSON.stringify({ cuestionario_id: cuestionarioId })
-        });
+        const cuestionarioId = {{ cuestionario.id| safe
+      }};
+    const response = await fetch("{% url 'comentario_cuestionario' %}", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-CSRFToken": "{{ csrf_token }}"
+      },
+      body: JSON.stringify({ cuestionario_id: cuestionarioId })
+    });
 
-        // Verifica si la respuesta es exitosa
-        if (!response.ok) {
-          throw new Error("Error en la solicitud");
-        }
+    // Verifica si la respuesta es exitosa
+    if (!response.ok) {
+      throw new Error("Error en la solicitud");
+    }
 
-        // Convierte la respuesta a JSON
-        const data = await response.json();
+    // Convierte la respuesta a JSON
+    const data = await response.json();
 
-        // Selecciona el div y muestra los datos obtenidos
-        const infoDiv = document.getElementById('comentario-openai');
+    // Selecciona el div y muestra los datos obtenidos
+    const infoDiv = document.getElementById('comentario-openai');
 
-        if (data.output) {
-          // Aplica la función que convierte los asteriscos en negrita
-          let formattedText = formatTextToBold(data.output);
+    if (data.output) {
+      // Aplica la función que convierte los asteriscos en negrita
+      let formattedText = formatTextToBold(data.output);
 
-          // Inserta el texto formateado en el div
-          infoDiv.innerHTML = `
+      // Inserta el texto formateado en el div
+      infoDiv.innerHTML = `
                 <h2>Comentario del Cuestionario</h2>
                 <p>${formattedText}</p>
               `;
-        } else if (data.error) {
-          infoDiv.innerHTML = `<p>Error: ${data.error}</p>`;
-        }
+    } else if (data.error) {
+      infoDiv.innerHTML = `<p>Error: ${data.error}</p>`;
+    }
 
-      } catch (error) {
-        console.error("Ocurrió un error al obtener los datos:", error);
-        document.getElementById('comentario-openai').textContent = "Error al cargar los datos.";
-      } finally {
-        // Oculta el spinner cuando se completa el fetch, ya sea con éxito o error
-        document.getElementById("spinner").style.display = "none";
-      }
+  } catch (error) {
+    console.error("Ocurrió un error al obtener los datos:", error);
+    document.getElementById('comentario-openai').textContent = "Error al cargar los datos.";
+  } finally {
+    // Oculta el spinner cuando se completa el fetch, ya sea con éxito o error
+    document.getElementById("spinner").style.display = "none";
+  }
     }
 
   function formatTextToBold(text) {
@@ -237,29 +255,55 @@
   cargarComentario();
   });
 </script>
-
 <script>
-  const getOptionChart = async () => {
-    try {
-        const response = await fetch("http://127.0.0.1:8000/api/get_chart/");
-      
-        return await response.json();
-    } catch (ex) {
-        alert(ex);
+  // Función para obtener el valor de una cookie por su nombre
+  function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+      const cookies = document.cookie.split(';');
+      for (let i = 0; i < cookies.length; i++) {
+        const cookie = cookies[i].trim();
+        // Si la cookie comienza con el nombre buscado, extrae su valor
+        if (cookie.substring(0, name.length + 1) === (name + '=')) {
+          cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+          break;
+        }
+      }
     }
-};
+    return cookieValue;
+  }
+</script>
+<script>
+  const getOptionChart = async (cuestionarioId) => {
+    try {
+      const response = await fetch("http://127.0.0.1:8000/api/get_chart/", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "X-CSRFToken": getCookie("csrftoken") // Asegúrate de manejar el CSRF
+        },
+        body: JSON.stringify({ cuestionario_id: cuestionarioId })
+      });
+      return await response.json();
+    } catch (ex) {
+      alert(ex);
+    }
+  };
 
-const initChart = async () => {
+  const initChart = async () => {
+    const cuestionarioId = 1;  // Cambiar según el ID del cuestionario que desees cargar
+
     const myChart = echarts.init(document.getElementById("chart"));
 
-    myChart.setOption(await getOptionChart());
+    // Llamamos a getOptionChart con el ID del cuestionario
+    myChart.setOption(await getOptionChart(cuestionarioId));
 
     myChart.resize();
-};
+  };
 
-window.addEventListener("load", async () => {
+  window.addEventListener("load", async () => {
     await initChart();
-});
+  });
 
 </script>
 

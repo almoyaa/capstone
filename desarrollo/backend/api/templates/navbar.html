@@ -14,65 +14,59 @@
         <nav>
             <input class="hidden" type="checkbox" id="menuToggle">
             <label class="menu-btn" for="menuToggle">
-<<<<<<< HEAD
                 <i class="fas fa-bars"></i> <!-- icono Hamb -->
                 <i class="fas fa-times"></i> <!-- icono cerrar -->
-=======
                 <i class="fas fa-bars"></i> <!-- Hamburger icon -->
                 <i class="fas fa-times"></i> <!-- Close icon -->
->>>>>>> d197cbec (Updated desarrollo folder with new changes)
+
             </label>
 
             <div class="nav-container">
-    <ul class="nav-tabs">
-        <li class="nav-tab {% if request.path == '/' %}active{% endif %}">
-            <a href="{% url 'crear-cuestionario' %}">
-                <i class="fas fa-home"></i> Inicio
-            </a>
-        </li>
-        <li class="nav-tab {% if request.path == '/crear-cuestionario/' %}active{% endif %}">
-            <a href="{% url 'crear-cuestionario' %}">
-                <i class="fas fa-puzzle-piece"></i> Cuestionarios
-            </a>
-        </li>
-        <li class="nav-tab {% if request.path == '/index-page/' %}active{% endif %}">
-            <a href="{% url 'index-page' %}">
-                <i class="fas fa-question-circle"></i> Preguntas
-            </a>
-        </li>
-        <li class="nav-tab {% if request.path == '/historial/' %}active{% endif %}">
-            <a href="{% url 'historial' %}">
-                <i class="fas fa-history"></i> Historial
-            </a>
-        </li>
-        {% if user.is_authenticated %}
-        <li class="nav-tab">
-            <form action="{% url 'logout' %}" method="post" style="display: inline;">
-                {% csrf_token %}
-                <button type="submit" style="background: none; border: none; color: inherit; cursor: pointer;">
-                    <i class="fas fa-sign-out-alt"></i> Salir
-                </button>
-            </form>
-        </li>
-        {% else %}
-        <li class="nav-tab">
-            <a href="{% url 'signup' %}">
-                <i class="fas fa-user-plus"></i> Registrarse
-            </a>
-        </li>
-        {% endif %}
-    </ul>
-</div>
+                <ul class="nav-tabs">
+                    <li class="nav-tab {% if request.path == '/' %}active{% endif %}">
+                        <a href="{% url 'crear-cuestionario' %}">
+                            <i class="fas fa-home"></i> Inicio
+                        </a>
+                    </li>
+                    <li class="nav-tab {% if request.path == '/crear-cuestionario/' %}active{% endif %}">
+                        <a href="{% url 'crear-cuestionario' %}">
+                            <i class="fas fa-puzzle-piece"></i> Cuestionarios
+                        </a>
+                    </li>
+                    <li class="nav-tab {% if request.path == '/index-page/' %}active{% endif %}">
+                        <a href="{% url 'index-page' %}">
+                            <i class="fas fa-question-circle"></i> Preguntas
+                        </a>
+                    </li>
+                    <li class="nav-tab {% if request.path == '/historial/' %}active{% endif %}">
+                        <a href="{% url 'historial' %}">
+                            <i class="fas fa-history"></i> Historial
+                        </a>
+                    </li>
+                    {% if user.is_authenticated %}
+                    <li class="nav-tab">
+                        <form action="{% url 'logout' %}" method="post" style="display: inline;">
+                            {% csrf_token %}
+                            <button type="submit"
+                                style="background: none; border: none; color: inherit; cursor: pointer;">
+                                <i class="fas fa-sign-out-alt"></i> Salir
+                            </button>
+                        </form>
+                    </li>
+                    {% else %}
+                    <li class="nav-tab">
+                        <a href="{% url 'signup' %}">
+                            <i class="fas fa-user-plus"></i> Registrarse
+                        </a>
+                    </li>
+                    {% endif %}
+                </ul>
+            </div>
 
-            
+
         </nav>
     </div>
 
-<<<<<<< HEAD
-    <!-- Backdrop sidebar -->
-=======
     <!-- Backdrop for Sidebar -->
->>>>>>> d197cbec (Updated desarrollo folder with new changes)
     <div class="backdrop"></div>
 </header>
-

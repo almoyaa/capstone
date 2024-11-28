@@ -27,16 +27,6 @@
                         {% endfor %}
                     </select>
                 </div>
-    
-                <div class="filter-group col-md-6">
-                    <label for="cantidad">Cantidad de preguntas:</label>
-                    <select id="cantidad" class="filter-select">
-                        <option value="5">5 preguntas</option>
-                        <option value="10">10 preguntas</option>
-                        <option value="15">15 preguntas</option>
-                        <option value="20">20 preguntas</option>
-                    </select>
-                </div>
             </div>
         </div>
 
@@ -52,14 +42,7 @@
             let myChart = new Chart(ctx, {
                 type: 'line',
                 data: {
-                    datasets: [{
-                        label: 'Respuestas Correctas',
-                        data: [],
-                        borderColor: '#4CAF50',
-                        backgroundColor: 'rgba(76, 175, 80, 0.1)',
-                        tension: 0.4,
-                        fill: true
-                    }]
+                    datasets: [] // Inicialmente vacío, se llenará dinámicamente
                 },
                 options: {
                     responsive: true,
@@ -70,29 +53,22 @@
                         },
                         title: {
                             display: true,
-                            text: 'Preguntas correctas por cuestionario'
+                            text: 'Respuestas correctas por tema'
                         }
                     },
                     scales: {
                         y: {
                             min: 0,
-                            max: cantidad,
+                            max: 20,
                             ticks: {
-                                stepSize: cantidad <= 10 ? 1 : 5,
+                                stepSize: 1,
                                 callback: function(value) {
-                                    // Para 5 y 10 preguntas, mostrar todos los números
-                                    if (cantidad <= 10) {
-                                        return value <= cantidad ? value : null;
-                                    }
-                                    // Para 15 y 20 preguntas, mostrar solo múltiplos de 5
-                                    else {
-                                        return value % 5 === 0 && value <= cantidad ? value : null;
-                                    }
+                                    return value <= 20 ? value : null;
                                 }
                             },
                             title: {
                                 display: true,
-                                text: 'Cantidad de preguntas correctas'
+                                text: 'Cantidad de respuestas correctas'
                             }
                         },
                         x: {
@@ -104,7 +80,7 @@
                                 }
                             },
                             ticks: {
-                                source: 'data',  // Solo mostrar fechas de los datos
+                                source: 'data',
                                 maxRotation: 45
                             },
                             title: {
@@ -116,47 +92,45 @@
                 }
             });
 
+            // Función para generar color aleatorio
+            function getRandomColor() {
+                const letters = '0123456789ABCDEF';
+                let color = '#';
+                for (let i = 0; i < 6; i++) {
+                    color += letters[Math.floor(Math.random() * 16)];
+                }
+                return color;
+            }
+
             // Función para actualizar el gráfico
             function actualizarGrafico() {
                 const materia = document.getElementById('materia').value;
-                const cantidad = parseInt(document.getElementById('cantidad').value);
 
-                fetch(`/api/progreso/?materia=${materia}&cantidad=${cantidad}`)
+                fetch(`/api/progreso/?materia=${materia}`)
                     .then(response => response.json())
                     .then(datos => {
                         console.log("Datos recibidos:", datos);
 
-                        // Crear los puntos de datos para el gráfico
-                        const dataPoints = datos.fechas.map((fecha, index) => ({
-                            x: fecha,
-                            y: datos.resultados[index]
-                        }));
+                        // Limpiar datasets existentes
+                        myChart.data.datasets = [];
 
-                        // Actualizar los datos del gráfico
-                        myChart.data.datasets[0].data = dataPoints;
+                        // Crear un dataset para cada tema
+                        Object.entries(datos.resultados_por_tema).forEach(([tema, resultados]) => {
+                            const color = getRandomColor();
+                            const dataPoints = datos.fechas.map((fecha, index) => ({
+                                x: fecha,
+                                y: resultados[index] || 0
+                            }));
 
-                        // Actualizar la configuración del eje Y según la cantidad
-                        myChart.options.scales.y = {
-                            min: 0,
-                            max: cantidad,
-                            ticks: {
-                                stepSize: cantidad <= 10 ? 1 : 5,
-                                callback: function(value) {
-                                    // Para 5 y 10 preguntas, mostrar todos los números
-                                    if (cantidad <= 10) {
-                                        return value <= cantidad ? value : null;
-                                    }
-                                    // Para 15 y 20 preguntas, mostrar solo múltiplos de 5
-                                    else {
-                                        return value % 5 === 0 && value <= cantidad ? value : null;
-                                    }
-                                }
-                            },
-                            title: {
-                                display: true,
-                                text: 'Cantidad de preguntas correctas'
-                            }
-                        };
+                            myChart.data.datasets.push({
+                                label: tema,
+                                data: dataPoints,
+                                borderColor: color,
+                                backgroundColor: color + '20', // Añadir transparencia
+                                tension: 0.4,
+                                fill: true
+                            });
+                        });
 
                         // Forzar la actualización del gráfico
                         myChart.update('none');
@@ -168,14 +142,9 @@
 
             // Eventos para los filtros
             document.getElementById('materia').addEventListener('change', actualizarGrafico);
-            document.getElementById('cantidad').addEventListener('change', actualizarGrafico);
 
             // Llamar a actualizarGrafico inicialmente
-<<<<<<< HEAD
             actualizarGrafico();
-=======
-            //actualizarGrafico();
->>>>>>> d197cbec (Updated desarrollo folder with new changes)
         });
     </script>
 </body>

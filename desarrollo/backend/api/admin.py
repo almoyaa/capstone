@@ -19,11 +19,10 @@ class CuestionarioAdmin(admin.ModelAdmin):
 
     inlines = [RespuestaFiltro]  # Incluye el Inline dentro de Cuestionario
     readonly_fields = ('respuestas_correctas',)
-    list_display = ('id','titulo', 'descripcion','materia', 'usuario')
     list_filter = ('usuario', 'materia')  # Filtros para la lista de cuestionarios
 
 class PreguntaAdmin(admin.ModelAdmin):
-    list_display = ('texto_pregunta','materia')
+    list_display = ('texto_pregunta','materia','embedding')
 
 class MateriaAdmin(admin.ModelAdmin):
 
