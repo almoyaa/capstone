@@ -1,6 +1,7 @@
 .container-info {
     display: flex;
     flex-direction: column;
+    max-width: 700px;
 }
 
 .sub-container ul li {
@@ -11,7 +12,7 @@
     display: flex;
     padding: 15px;
     border-radius: 15px;
-    background: #95ddf35e;
+    background: #f8f0f0;
 }
 
 #pie-chart {

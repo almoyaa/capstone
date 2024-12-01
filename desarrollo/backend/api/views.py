@@ -2,8 +2,9 @@ import os
 import json
 import openai
 import time
+import traceback
 from datetime import datetime
-from collections import defaultdict
+from collections import defaultdict, Counter
 from random import randrange
 from dotenv import load_dotenv
 
@@ -32,6 +33,10 @@ from langchain_openai import ChatOpenAI, OpenAIEmbeddings
 from langchain.agents import AgentExecutor, create_openai_tools_agent
 
 from sentence_transformers import SentenceTransformer, util
+
+import matplotlib.pyplot as plt
+from io import BytesIO
+import base64
 
 load_dotenv()
 def cargar_pdfs_desde_carpeta(carpeta, embeddings_model):
@@ -337,7 +342,6 @@ def similarity_sentence_transformers(text1, text2):
 
 
 
-#POST PARA CREAR PREGUNTAS
 @csrf_exempt
 def crear_preguntas(request):
     if request.method == 'POST':
@@ -351,19 +355,14 @@ def crear_preguntas(request):
             temas = materia.tema.all()
             temarios = ', '.join([tema.nombre for tema in temas])
 
-            # **Buscar preguntas similares en el historial con embeddings**
+            # Recuperar preguntas previas de la materia con embeddings
             preguntas_existentes = Pregunta.objects.filter(materia=materia)
-            # Obtengo las preguntas "embedeadas" (LISTA POR COMPRESION)
-            historial_embeddings = [
-                pregunta.embedding for pregunta in preguntas_existentes if pregunta.embedding
-            ]
-
             historial_preguntas = [
                 {
                     "pregunta": pregunta.texto_pregunta,
                     "embedding": pregunta.embedding
                 }
-                for pregunta in preguntas_existentes
+                for pregunta in preguntas_existentes if pregunta.embedding
             ]
 
             # Construcción del prompt
@@ -399,62 +398,58 @@ def crear_preguntas(request):
             agent = create_openai_tools_agent(model, TOOLS, prompt)
             agent_executor = AgentExecutor(agent=agent, tools=TOOLS, verbose=True)
 
-            # Ejecución del agente
-            response = agent_executor.invoke({})  # Ejecutar consulta al agente
+            # Ejecutar consulta al agente
+            response = agent_executor.invoke({})
             output_text = response.get("output", "")
 
-            # Limpiar y procesar el JSON recibido
+            # Procesar el JSON recibido
             clean_output = output_text.replace('```json\n', '').replace('```', '')
             try:
                 preguntas_data = json.loads(clean_output)
-                print("preguntas_data")
-                print(preguntas_data)
             except json.JSONDecodeError:
                 return JsonResponse({"error": "El modelo devolvió un JSON inválido."}, status=500)
 
             preguntas_guardadas = []
-            preguntas_similares = []  # Lista para almacenar preguntas similares encontradas
+            preguntas_similares = []
 
             # Instanciamos el modelo de Sentence-Transformer
             model_embed = SentenceTransformer('all-MiniLM-L6-v2')
 
             # Guardar preguntas en la base de datos
             for pregunta_data in preguntas_data:
-                tema = Tema.objects.get(nombre=pregunta_data["tema"])
-
                 es_similar = False
-                if historial_preguntas:  # Si existen preguntas previas en el historial de la materia selecta.
-                    for historial in historial_preguntas: # Historial_preguntas lista de jsons de la pregunta y embedding correspondiente
+                similitud_maxima = 0
+                pregunta_similar = None
+
+                if historial_preguntas:
+                    for historial in historial_preguntas:
                         similitud = similarity_sentence_transformers(
                             pregunta_data["pregunta"], historial["pregunta"]
                         )
+                        if similitud > similitud_maxima:
+                            similitud_maxima = similitud
+                            pregunta_similar = historial["pregunta"]
 
-                        print("Similitud")
-                        print(similitud)
-                        if similitud > 0.85:  # Umbral de similitud
-                            es_similar = True
-                            print("similituuuuuuuuuud")
-                            preguntas_similares.append({
-                                "pregunta": pregunta_data["pregunta"],
-                                "similitud": similitud
-                            })
-                            break  # Salir del bucle si ya encontramos una pregunta similar
+                if similitud_maxima > 0.85:  # Umbral de similitud
+                    es_similar = True
+                    preguntas_similares.append({
+                        "pregunta_generada": pregunta_data["pregunta"],
+                        "pregunta_similar": pregunta_similar,
+                        "similitud": similitud_maxima
+                    })
 
-                if es_similar:
-                    continue  # Saltar preguntas similares
+                tema = Tema.objects.get(nombre=pregunta_data["tema"])
 
-                # Generar el embedding de la nueva pregunta y convertirlo a lista
+                # Generar embedding y guardar la pregunta
                 nueva_pregunta_embedding = model_embed.encode(pregunta_data["pregunta"]).tolist()
-
-                # Crear la pregunta
                 pregunta = Pregunta.objects.create(
                     texto_pregunta=pregunta_data["pregunta"],
                     materia=materia,
                     tema=tema,
-                    embedding=nueva_pregunta_embedding  # Guardamos el embedding como lista
+                    embedding=nueva_pregunta_embedding
                 )
 
-                # Crear las opciones de respuesta
+                # Guardar las opciones de respuesta
                 for opcion in pregunta_data["opciones"]:
                     Respuesta.objects.create(
                         texto_respuesta=opcion["texto"],
@@ -462,7 +457,7 @@ def crear_preguntas(request):
                         pregunta=pregunta
                     )
 
-                # Agregar la pregunta y sus respuestas al JSON final
+                # Construir JSON para las preguntas guardadas
                 respuestas = [
                     {
                         "id": respuesta.id,
@@ -477,86 +472,32 @@ def crear_preguntas(request):
                     "texto_pregunta": pregunta.texto_pregunta,
                     "materia": materia_nombre,
                     "tema": tema.nombre,
-                    "respuestas": respuestas
+                    "respuestas": respuestas,
+                    "es_similar": es_similar  # Indicar si la pregunta fue marcada como similar
                 }
 
                 preguntas_guardadas.append(pregunta_json)
 
-            # Si hay preguntas similares, hacer otra consulta a la API de ChatGPT para completar la cantidad solicitada
-            if len(preguntas_guardadas) < cantidad:
-                print("PIDIENDO PP[REGUNTAS NUEVAS]")
-                preguntas_restantes = cantidad - len(preguntas_guardadas)
-                prompt_historico = f"""Dame {preguntas_restantes} preguntas adicionales en formato JSON, asegurándote de no repetir ninguna pregunta similar a las que ya se han generado o están en el historial de preguntas similares: {json.dumps(preguntas_similares)}"""
-                prompt = ChatPromptTemplate.from_messages([
-                    ("system", prompt_historico),
-                    ("human", f"""Dame {preguntas_restantes} preguntas en formato JSON. Las preguntas deben ser diferentes a las ya generadas."""),
-                    MessagesPlaceholder(variable_name="agent_scratchpad"),
-                ])
-
-                # Nueva ejecución del agente para obtener más preguntas
-                response = agent_executor.invoke({})  # Ejecutar consulta al agente
-                output_text = response.get("output", "")
-                clean_output = output_text.replace('```json\n', '').replace('```', '')
-
-                try:
-                    preguntas_restantes_data = json.loads(clean_output)
-                except json.JSONDecodeError:
-                    return JsonResponse({"error": "El modelo devolvió un JSON inválido."}, status=500)
-
-                # Agregar las preguntas restantes al historial
-                for pregunta_data in preguntas_restantes_data:
-                    tema = Tema.objects.get(nombre=pregunta_data["tema"])
-
-                    # Generar el embedding de la nueva pregunta y convertirlo a lista
-                    nueva_pregunta_embedding = model_embed.encode(pregunta_data["pregunta"]).tolist()
-
-                    # Crear la pregunta
-                    pregunta = Pregunta.objects.create(
-                        texto_pregunta=pregunta_data["pregunta"],
-                        materia=materia,
-                        tema=tema,
-                        embedding=nueva_pregunta_embedding  # Guardamos el embedding como lista
-                    )
-
-                    # Crear las opciones de respuesta
-                    for opcion in pregunta_data["opciones"]:
-                        Respuesta.objects.create(
-                            texto_respuesta=opcion["texto"],
-                            es_correcta=opcion["es_correcta"],
-                            pregunta=pregunta
-                        )
-
-                    # Agregar la pregunta y sus respuestas al JSON final
-                    respuestas = [
-                        {
-                            "id": respuesta.id,
-                            "texto_respuesta": respuesta.texto_respuesta,
-                            "es_correcta": respuesta.es_correcta,
-                        }
-                        for respuesta in pregunta.respuestas.all()
-                    ]
-
-                    pregunta_json = {
-                        "id": pregunta.id,
-                        "texto_pregunta": pregunta.texto_pregunta,
-                        "materia": materia_nombre,
-                        "tema": tema.nombre,
-                        "respuestas": respuestas
-                    }
-
-                    preguntas_guardadas.append(pregunta_json)
-
             # Guardar las preguntas generadas en la sesión
             request.session['preguntas_guardadas'] = preguntas_guardadas
+            request.session['preguntas_similares'] = preguntas_similares
+
+            print("Preguntas Similares:")
+            print(preguntas_similares)
+            print("Preguntas JSON:")
+            print(preguntas_guardadas)
 
             # Renderizar la plantilla con las preguntas
-            return render(request, 'pregunta.html', {'preguntas_json': json.dumps(preguntas_guardadas)})
+            return render(
+                request, 
+                'pregunta.html', 
+                {'preguntas_json': json.dumps(preguntas_guardadas), 'preguntas_similares': preguntas_similares}
+            )
 
         except Exception as e:
             return JsonResponse({"error": str(e)}, status=500)
     else:
         return JsonResponse({"error": "Método de solicitud no permitido."}, status=405)
-
 
 
 def historial_usuario(request):
@@ -630,57 +571,47 @@ def retro(request):
 
 @csrf_exempt
 def comentario_cuestionario(request):
+    print("ENTRANDO A LA VISTA")
     if request.method == 'POST':
+        print("ENTRANDO AL POST")
         try:
             data = json.loads(request.body)
             cuestionario_id = data.get("cuestionario_id")
             cuestionario = Cuestionario.objects.get(id=cuestionario_id)
-            materia = cuestionario.materia
 
-            # Recolectar preguntas, respuestas del usuario, y si fueron correctas o no
+            # Agrupar errores por tema
             respuestas_usuario = cuestionario.respuestas_usuario.all()
-            errores = []
+            errores_por_tema = Counter()
 
             for respuesta in respuestas_usuario:
-                if not respuesta.es_correcta:
-                    errores.append({
-                        "pregunta": respuesta.pregunta.texto_pregunta,
-                        "respuesta_usuario": respuesta.texto_respuesta,
-                        "respuesta_correcta": respuesta.pregunta.respuestas.get(es_correcta=True).texto_respuesta
-                    })
+                if not respuesta.es_correcta and respuesta.pregunta.tema:
+                    tema_nombre = respuesta.pregunta.tema.nombre
+                    errores_por_tema[tema_nombre] += 1
 
-            # Crear una lista de los errores formateados para el prompt
+            # Generar texto del resumen de errores por tema
             errores_texto = "\n".join(
-                f"Pregunta: {error['pregunta']}\n"
-                f"Tu Respuesta: {error['respuesta_usuario']}\n"
-                f"Respuesta Correcta: {error['respuesta_correcta']}\n"
-                for error in errores
+                f"Tema: {tema}, Errores: {cantidad}"
+                for tema, cantidad in errores_por_tema.items()
             )
+            print("Errores por tema:", errores_texto)
 
-
-            
-            
-
-            # Definir el prompt con las respuestas incorrectas y el contexto
+            # Generar prompt basado en errores por tema
             prompt = ChatPromptTemplate.from_messages(
                 [
                     (
                         "system",
-                        f"""Eres un profesor experto en {materia} preparando alumnos para la evaluación PAES de Chile. 
-                        A continuación se te entregan algunas preguntas incorrectas del cuestionario de un estudiante.
-                        Proporciona recomendaciones y sugerencias específicas para ayudar al estudiante a comprender sus errores 
-                        y mejorar en el tema.
+                        f"""Respecto a informacion proporcionada, entrega un resumen básico y comprensible.
                         """),
                     ("human",
-                        f"Errores en el cuestionario:\n{errores_texto}\n\n"
-                        "¿Qué puedo hacer para mejorar mis resultados en base a los errores anteriores?"
+                        f"Resumen de errores por tema:\n{errores_texto}\n\n"
+                        "¿Cuales son las areas mas debiles y fuertes que tengo?"
                     ),
                     MessagesPlaceholder(variable_name="agent_scratchpad"),
                 ]
             )
 
             seed = int(time.time())
-            model = ChatOpenAI(temperature=0.3, model="gpt-4o", seed=seed)
+            model = ChatOpenAI(temperature=0.5, model="gpt-4o", seed=seed)
             agent = create_openai_tools_agent(model, TOOLS, prompt)
             agent_executor = AgentExecutor(agent=agent, tools=TOOLS, verbose=False)
             response = agent_executor.invoke({})
@@ -689,13 +620,12 @@ def comentario_cuestionario(request):
             return JsonResponse({"output": output_text})
 
         except Exception as e:
+            print(f"Error: {str(e)}")
+            print(traceback.format_exc())
             return JsonResponse({"error": str(e)}, status=500)
     else:
         return JsonResponse({"error": "Método de solicitud no permitido."}, status=405)
-        print(f"Error en historial_usuario: {str(e)}")
-        import traceback
-        print(traceback.format_exc())
-        return JsonResponse({'error': str(e)}, status=500)
+
 
 @csrf_exempt
 def obtener_progreso(request):
@@ -758,7 +688,7 @@ def obtener_progreso(request):
 def get_chart(request):
     # Filtrar los cuestionarios de la materia "Biología"
     cuestionarios = Cuestionario.objects.filter(
-        materia='Biología',
+        materia='Química',
         fecha_creacion__isnull=False
     ).order_by('fecha_creacion')
 
@@ -790,7 +720,7 @@ def get_chart(request):
             if tema_nombre not in series_data:
                 series_data[tema_nombre] = []
 
-            series_data[tema_nombre].append(correctas)
+            series_data[tema_nombre].append(incorrectas)
 
     # Asegurar que cada serie tenga la misma longitud que el eje X
     for tema in temas:
@@ -816,7 +746,7 @@ def get_chart(request):
         })
 
     # Crear el JSON del gráfico
-    chart = {
+    option = {
         'title': {
             'text': 'Preguntas Erróneas por Cuestionarios'
         },
@@ -858,7 +788,7 @@ def get_chart(request):
         'series': formatted_series
     }
 
-    return JsonResponse(chart)
+    return JsonResponse(option)
 
 
 @csrf_exempt
@@ -902,3 +832,203 @@ def preguntas_faltantes(cantidad, temarios):
     clean_output = output_text.replace('```json\n', '').replace('```', '')
 
     return clean_output
+
+
+@csrf_exempt
+def get_barra(request):
+    # Filtrar los cuestionarios por materia
+    cuestionarios = Cuestionario.objects.filter(materia='Matemática M2')
+    
+    # Obtener los temas relacionados con la materia
+    temas = Tema.objects.filter(materia__nombre='Matemática M2').distinct()
+    tema_nombres = [tema.nombre for tema in temas]
+
+    # Construir el dataset para el gráfico
+    dimensiones = ['cuestionario'] + tema_nombres
+    print("Dimensiones")
+    print(dimensiones)
+    source = []
+
+    for cuestionario in cuestionarios:
+        # Inicializar datos del cuestionario con 0 para cada tema
+        data_cuestionario = {'cuestionario': cuestionario.titulo}
+        for tema_nombre in tema_nombres:
+            data_cuestionario[tema_nombre] = 0  # Inicializamos en 0
+
+        # Calcular respuestas correctas por tema
+        for tema in temas:
+            preguntas_tema = cuestionario.preguntas.filter(tema=tema)
+            correctas_tema = Respuesta.objects.filter(
+                pregunta__in=preguntas_tema,
+                es_correcta=True
+            ).count()
+            data_cuestionario[tema.nombre] = correctas_tema
+        
+        source.append(data_cuestionario)
+
+    print("Source")
+    print(source)
+
+    # Crear la estructura final
+    data = {
+        'dataset': {
+            'dimensions': dimensiones,
+            'source': source,
+        }
+    }
+
+    return JsonResponse(data)
+
+@csrf_exempt
+def crear_preguntas_retro(request):
+    print('Iniciando generación de preguntas')
+    if request.method == 'POST':
+        try:
+            # Extraer los parámetros de la solicitud
+            cantidad = int(request.POST.get("cantidad"))
+            materia_nombre = request.POST.get("materia")
+            materia = Materia.objects.get(nombre=materia_nombre)
+
+            # Recuperar los temas asociados a la materia
+            temas = materia.tema.all()
+
+            # Recopilar cuestionarios de la materia
+            cuestionarios = Cuestionario.objects.filter(materia=materia_nombre)
+
+            # Calcular porcentaje de aprobación por tema
+            porcentaje_aprobacion_por_tema = {}
+
+            for tema in temas:
+                total_preguntas = 0
+                preguntas_aprobadas = 0
+
+                for cuestionario in cuestionarios:
+                    for respuesta in cuestionario.respuestas_usuario.all():
+                        if respuesta.pregunta.tema == tema:
+                            total_preguntas += 1
+                            if respuesta.es_correcta:
+                                preguntas_aprobadas += 1
+
+                # Si hay preguntas en el tema, calculamos el porcentaje de aprobación
+                if total_preguntas > 0:
+                    porcentaje_aprobacion = (preguntas_aprobadas / total_preguntas) * 100
+                    porcentaje_aprobacion_por_tema[tema.nombre] = porcentaje_aprobacion
+                else:
+                    # Si no hay preguntas en el tema, asignamos un 0% de aprobación
+                    porcentaje_aprobacion_por_tema[tema.nombre] = 0
+
+            print("Porcentaje de aprobacion por tema")
+            print(porcentaje_aprobacion_por_tema)
+
+            # Ordenar los temas por el porcentaje de aprobación (de menor a mayor)
+            temas_ordenados = sorted(porcentaje_aprobacion_por_tema.items(), key=lambda x: x[1])
+
+            print("Temarios ordenasdsadsadsadadaddssadados")
+            print(temas_ordenados)
+
+            # Construcción del prompt priorizando los temas con menor porcentaje de aprobación
+            temarios = ', '.join([tema.nombre for tema in temas])
+            prompt = ChatPromptTemplate.from_messages([
+                (
+                    "system",
+                    f"""Eres un profesor experto en la evaluación PAES Chile. Los alumnos vienen a solicitarte preguntas de 5 alternativas, 
+                    con alta dificultad. No repitas preguntas similares al historial proporcionado. Responde en formato JSON únicamente.
+                    [
+                        "pregunta": "Texto de la pregunta",
+                        "tema": "Tema correspondiente",
+                        "opciones": [
+                            "texto": "Opción 1", "es_correcta": null,
+                            "texto": "Opción 2", "es_correcta": null,
+                            "texto": "Opción 3", "es_correcta": null,
+                            "texto": "Opción 4", "es_correcta": null,
+                            "texto": "Opción 5", "es_correcta": null
+                        ]
+                        ,
+                        ...
+                    ]
+                    """),
+                ("human",
+                    f"""Dame {cantidad} preguntas en formato JSON de todos estos temarios: {temarios}. Dame las preguntas enfocadas en los 2 o 3 temarios con menor porcentaje de aprobacion, en caso de ser todos 0, reparte equitativamente: {temas_ordenados}.
+                    """),
+                MessagesPlaceholder(variable_name="agent_scratchpad"),
+            ])
+
+            # Configuración del modelo y agente
+            seed = int(time.time())
+            model = ChatOpenAI(temperature=0, model="gpt-4", seed=seed)
+            agent = create_openai_tools_agent(model, TOOLS, prompt)
+            agent_executor = AgentExecutor(agent=agent, tools=TOOLS, verbose=True)
+
+            # Ejecutar consulta al agente
+            response = agent_executor.invoke({})
+            output_text = response.get("output", "")
+
+            # Procesar el JSON recibido
+            clean_output = output_text.replace('```json\n', '').replace('```', '')
+            print(json.loads(clean_output))
+            print(clean_output)
+            try:
+                preguntas_data = json.loads(clean_output)
+            except json.JSONDecodeError:
+                return JsonResponse({"error": "El modelo devolvió un JSON inválido."}, status=500)
+
+            preguntas_guardadas = []
+
+            # Instanciamos el modelo de Sentence-Transformer
+            model_embed = SentenceTransformer('all-MiniLM-L6-v2')
+
+            # Guardar preguntas en la base de datos
+            for pregunta_data in preguntas_data:
+                tema = Tema.objects.get(nombre=pregunta_data["tema"])
+
+                # Generar embedding y guardar la pregunta
+                nueva_pregunta_embedding = model_embed.encode(pregunta_data["pregunta"]).tolist()
+                pregunta = Pregunta.objects.create(
+                    texto_pregunta=pregunta_data["pregunta"],
+                    materia=materia,
+                    tema=tema,
+                    embedding=nueva_pregunta_embedding
+                )
+
+                # Guardar las opciones de respuesta
+                for opcion in pregunta_data["opciones"]:
+                    Respuesta.objects.create(
+                        texto_respuesta=opcion["texto"],
+                        es_correcta=opcion["es_correcta"],
+                        pregunta=pregunta
+                    )
+
+                # Construir JSON para las preguntas guardadas
+                respuestas = [
+                    {
+                        "id": respuesta.id,
+                        "texto_respuesta": respuesta.texto_respuesta,
+                        "es_correcta": respuesta.es_correcta,
+                    }
+                    for respuesta in pregunta.respuestas.all()
+                ]
+
+                pregunta_json = {
+                    "id": pregunta.id,
+                    "texto_pregunta": pregunta.texto_pregunta,
+                    "materia": materia_nombre,
+                    "tema": tema.nombre,
+                    "respuestas": respuestas,
+                }
+
+                preguntas_guardadas.append(pregunta_json)
+
+            # Guardar las preguntas generadas en la sesión
+            request.session['preguntas_guardadas'] = preguntas_guardadas
+
+            # Renderizar la plantilla con las preguntas
+            return render(
+                request, 
+                'pregunta.html', 
+                {'preguntas_json': json.dumps(preguntas_guardadas)}
+            )
+
+        except Exception as e:
+            return JsonResponse({"error": str(e)}, status=500)
+    else:
+        return JsonResponse({"error": "Método de solicitud no permitido."}, status=405)

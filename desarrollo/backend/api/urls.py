@@ -1,5 +1,5 @@
 from django.urls import path
-from .views import UsuarioCreateView, CuestionarioCreateView, UsuarioAllView, CuestionarioAllView, PreguntaCreateView, PreguntaAllView, crear_preguntas, MateriaListView, CuestionarioListView, historial_usuario, HistorialTemplateView, retro, comentario_cuestionario, obtener_progreso, get_chart
+from .views import UsuarioCreateView, CuestionarioCreateView, UsuarioAllView, CuestionarioAllView, PreguntaCreateView, PreguntaAllView, crear_preguntas, MateriaListView, CuestionarioListView, historial_usuario, HistorialTemplateView, retro, comentario_cuestionario, obtener_progreso, get_chart, get_barra, crear_preguntas_retro
 
 urlpatterns = [
     path('crear-usuario/', UsuarioCreateView.as_view(), name='crear-usuario'),
@@ -15,5 +15,7 @@ urlpatterns = [
     path('retro/',retro, name='crear-retro'),
     path('comentario_cuestionario',comentario_cuestionario,name='comentario_cuestionario'),
     path('progreso/', obtener_progreso, name='obtener-progreso'),
-    path('get_chart/', get_chart, name='get_chart')
+    path('get_chart/', get_chart, name='get_chart'),
+    path('get_barra/', get_barra, name='get_barra'),
+    path('crear-preguntas-retro/', crear_preguntas_retro,name='crear-preguntas-retro'),
 ]

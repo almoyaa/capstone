@@ -19,11 +19,8 @@
 {% include "navbar.html" %}
 
 <body>
-  <div id="chart" style="width: 100%; height: 400px;" class="chart"></div>
   <div class="container">
     <h1>Retroalimentación</h1>
-
-
     <div class="graph-container">
       <h3>Resultados del Cuestionario</h3>
     </div>
@@ -69,14 +66,16 @@
             <div id="spinner" style="display: none;">
               <p>Cargando comentario...</p>
               <div class="spinner"></div>
+              
             </div>
+            
           </div>
 
         </li>
       </ul>
-      <div class="graph-container">
-        <canvas id="pie-chart"></canvas>
-      </div>
+      <div style="width: 700px; height: 400px; overflow-x: auto;">
+        <div id="barra" style="width: auto; height: 400px;"></div>
+    </div>
     </div>
     <div>
       <h1>Respuestas del cuestionario</h1>
@@ -95,19 +94,19 @@
           <input type="hidden" name="pregunta_id" value="{{ respuesta_data.pregunta.id }}">
           <input type="hidden" name="respuesta_usuario" value="{{ respuesta_data.respuesta_usuario }}">
           <button style="
-    background-color: #4CAF50; /* Verde atractivo */
-    color: white; /* Texto blanco */
-    border: none; /* Sin borde */
-    padding: 10px 20px; /* Espaciado interno */
-    text-align: center; /* Centrado */
-    text-decoration: none; /* Sin subrayado */
-    display: inline-block; /* Para usar en línea */
-    font-size: 16px; /* Tamaño del texto */
-    border-radius: 5px; /* Bordes redondeados */
-    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2); /* Sombra */
-    cursor: pointer; /* Cursor de mano */
-    transition: background-color 0.3s ease, transform 0.2s ease; /* Transiciones */
-" onmouseover="this.style.backgroundColor='#45a049'; this.style.transform='scale(1.05)';"
+            background-color: #4CAF50;
+            color: white;
+            border: none; 
+            padding: 10px 20px; 
+            text-align: center; 
+            text-decoration: none;
+            display: inline-block; 
+            font-size: 16px; 
+            border-radius: 5px; 
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2);
+            cursor: pointer; 
+            transition: background-color 0.3s ease, transform 0.2s ease;
+            " onmouseover="this.style.backgroundColor='#45a049'; this.style.transform='scale(1.05)';"
             onmouseout="this.style.backgroundColor='#4CAF50'; this.style.transform='scale(1)';" type="submit">Ver
             explicación</button>
         </form>
@@ -118,7 +117,8 @@
         {% endfor %}
       </div>
     </div>
-    <div id="myChart" style="width:800px; height:600px; "></div>
+    
+  
 
     <!-- Contenedor de diálogo de retroalimentación -->
     <div id="retroalimentacion-dialogo" style="display: none">
@@ -204,16 +204,15 @@
         // Muestra el spinner antes de comenzar el fetch
         document.getElementById("spinner").style.display = "block";
         const erroresPorTema = JSON.parse('{{ errores_por_tema|safe }}');
-        const cuestionarioId = {{ cuestionario.id| safe
-      }};
-    const response = await fetch("{% url 'comentario_cuestionario' %}", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "X-CSRFToken": "{{ csrf_token }}"
-      },
-      body: JSON.stringify({ cuestionario_id: cuestionarioId })
-    });
+        const cuestionarioId = {{ cuestionario.id| safe }};
+        const response = await fetch("{% url 'comentario_cuestionario' %}", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "X-CSRFToken": "{{ csrf_token }}"
+          },
+          body: JSON.stringify({ cuestionario_id: cuestionarioId })
+        });
 
     // Verifica si la respuesta es exitosa
     if (!response.ok) {
@@ -232,7 +231,7 @@
 
       // Inserta el texto formateado en el div
       infoDiv.innerHTML = `
-                <h2>Comentario del Cuestionario</h2>
+                <h2>Atento!</h2>
                 <p>${formattedText}</p>
               `;
     } else if (data.error) {
@@ -306,6 +305,44 @@
   });
 
 </script>
+
+<script>
+  // Obtener los datos desde la vista Django a través de fetch
+  fetch('http://127.0.0.1:8000/api/get_barra/')
+      .then(response => response.json())
+      .then(data => {
+          // Inicializar el gráfico ECharts
+          var chartDom = document.getElementById('barra');
+          var myChart = echarts.init(chartDom);
+
+          // Configuración del gráfico con los datos recibidos
+          var option = {
+              legend: {},
+              tooltip: {},
+              dataset: {
+                  source: data.dataset.source,
+                  dimensions: data.dataset.dimensions,
+              },
+              xAxis: {
+                  type: 'category',
+                  name: 'Cuestionarios',
+              },
+              yAxis: {
+                  name: 'Respuestas Correctas',
+              },
+              series: data.dataset.dimensions
+                  .slice(1) // Excluir el primer elemento, que es 'cuestionario'
+                  .map(() => ({
+                      type: 'bar'
+                  })),
+          };
+
+          // Establecer la opción del gráfico
+          myChart.setOption(option);
+      })
+      .catch(error => console.error('Error al cargar los datos del gráfico:', error));
+</script>
+
 
 
 </html>

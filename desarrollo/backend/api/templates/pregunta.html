@@ -16,6 +16,7 @@
         <form class="form" action="" method="POST" onsubmit="return saveAns()">
             {% csrf_token %}
             <div class="pregunta-container">
+                <p id="pregunta-tema"></p>
                 <p id="pregunta-texto"></p>
             </div>
 
@@ -46,6 +47,7 @@
             const pregunta = preguntasGuardadas[index];
             if (index >= 0 && index < preguntasGuardadas.length) {
                 document.getElementById('pregunta-texto').innerText = pregunta.texto_pregunta;
+                document.getElementById('pregunta-tema').innerText = pregunta.tema;
                 document.getElementById('numero-pregunta').innerText = `Pregunta ${index + 1} de ${preguntasGuardadas.length}`;  // Actualiza el texto del número de pregunta
     
                 // Mostrar las respuestas
