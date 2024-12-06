@@ -836,49 +836,57 @@ def preguntas_faltantes(cantidad, temarios):
 
 
 @csrf_exempt
-def get_barra(request,materia):
-    # Filtrar los cuestionarios por materia
-    cuestionarios = Cuestionario.objects.filter(materia=materia)
-    
-    # Obtener los temas relacionados con la materia
-    temas = Tema.objects.filter(materia__nombre=materia).distinct()
-    tema_nombres = [tema.nombre for tema in temas]
+def get_barra(request, materia):
+    try:
+        # Filtrar los cuestionarios por materia
+        cuestionarios = Cuestionario.objects.filter(materia=materia)
 
-    # Construir el dataset para el gráfico
-    dimensiones = ['cuestionario'] + tema_nombres
-    print("Dimensiones")
-    print(dimensiones)
-    source = []
+        # Obtener los temas relacionados con la materia
+        temas = Tema.objects.filter(materia__nombre=materia).distinct()
+        tema_nombres = [tema.nombre for tema in temas]
 
-    for cuestionario in cuestionarios:
-        # Inicializar datos del cuestionario con 0 para cada tema
-        data_cuestionario = {'cuestionario': cuestionario.titulo}
-        for tema_nombre in tema_nombres:
-            data_cuestionario[tema_nombre] = 0  # Inicializamos en 0
+        # Construir el dataset para el gráfico
+        dimensiones = ['cuestionario'] + tema_nombres
+        source = []
 
-        # Calcular respuestas correctas por tema
-        for tema in temas:
-            preguntas_tema = cuestionario.preguntas.filter(tema=tema)
-            correctas_tema = Respuesta.objects.filter(
-                pregunta__in=preguntas_tema,
-                es_correcta=True
-            ).count()
-            data_cuestionario[tema.nombre] = correctas_tema
-        
-        source.append(data_cuestionario)
+        for cuestionario in cuestionarios:
+            # Inicializar datos del cuestionario con 0 para cada tema
+            data_cuestionario = {'cuestionario': cuestionario.titulo}
+            for tema_nombre in tema_nombres:
+                data_cuestionario[tema_nombre] = 0  # Inicializamos en 0
 
-    print("Source")
-    print(source)
+            # Calcular respuestas correctas seleccionadas por los usuarios para cada tema
+            for tema in temas:
+                # Filtrar preguntas relacionadas con el tema
+                preguntas_tema = cuestionario.preguntas.filter(tema=tema)
 
-    # Crear la estructura final
-    data = {
-        'dataset': {
-            'dimensions': dimensiones,
-            'source': source,
+                # Filtrar respuestas seleccionadas por el usuario para estas preguntas y que sean correctas
+                correctas_tema = cuestionario.respuestas_usuario.filter(
+                    pregunta__in=preguntas_tema,
+                    es_correcta=True
+                ).count()
+
+                # Guardar el conteo de respuestas correctas en el tema
+                data_cuestionario[tema.nombre] = correctas_tema
+            
+            source.append(data_cuestionario)
+
+        # Crear la estructura final
+        data = {
+            'dataset': {
+                'dimensions': dimensiones,
+                'source': source,
+            }
         }
-    }
 
-    return JsonResponse(data)
+        return JsonResponse(data)
+    
+    except Exception as e:
+        print(f"Error en get_barra: {str(e)}")
+        import traceback
+        print(traceback.format_exc())
+        return JsonResponse({'error': str(e)}, status=500)
+
 
 @csrf_exempt
 def crear_preguntas_retro(request):
@@ -917,18 +925,15 @@ def crear_preguntas_retro(request):
                 else:
                     # Si no hay preguntas en el tema, asignamos un 0% de aprobación
                     porcentaje_aprobacion_por_tema[tema.nombre] = 0
-
-            print("Porcentaje de aprobacion por tema")
-            print(porcentaje_aprobacion_por_tema)
-
-            # Ordenar los temas por el porcentaje de aprobación (de menor a mayor)
-            temas_ordenados = sorted(porcentaje_aprobacion_por_tema.items(), key=lambda x: x[1])
-
-            print("Temarios ordenasdsadsadsadadaddssadados")
-            print(temas_ordenados)
-
+            
             # Construcción del prompt priorizando los temas con menor porcentaje de aprobación
             temarios = ', '.join([tema.nombre for tema in temas])
+
+            # Ordenar el diccionario por valores (porcentajes)
+            temas_ordenados = sorted(porcentaje_aprobacion_por_tema.items(), key=lambda x: x[1])
+
+            # Obtener los dos temas con menor porcentaje
+            dos_menores = temas_ordenados[:2]
             prompt = ChatPromptTemplate.from_messages([
                 (
                     "system",
@@ -949,7 +954,7 @@ def crear_preguntas_retro(request):
                     ]
                     """),
                 ("human",
-                    f"""Dame {cantidad} preguntas en formato JSON de todos estos temarios: {temarios}. Dame las preguntas enfocadas en los 2 o 3 temarios con menor porcentaje de aprobacion, en caso de ser todos 0, reparte equitativamente: {temas_ordenados}.
+                    f"""Dame {cantidad} preguntas en formato JSON de todos estos temarios: {temarios}. Dame las preguntas exclusivamente sobre de los 2 temarios con menor porcentaje de aprobacion, en caso de ser todos 0, que haya de cada tema: {temas_ordenados}.
                     """),
                 MessagesPlaceholder(variable_name="agent_scratchpad"),
             ])
@@ -1023,6 +1028,12 @@ def crear_preguntas_retro(request):
             request.session['preguntas_guardadas'] = preguntas_guardadas
 
             # Renderizar la plantilla con las preguntas
+            print("Creacion de prommpt")
+            print(prompt)
+            print("Cantidad")
+            print(cantidad)
+            print("Temarios mas bajos")
+            print(dos_menores)
             return render(
                 request, 
                 'pregunta.html', 

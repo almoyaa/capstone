@@ -1,16 +1,15 @@
-<head></head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-{% load static %}
-<link rel="stylesheet" href="{% static '/css/pregunta.css' %}" />
-<link rel="stylesheet" href="{% static '/css/crear-cuestionario.css' %}" />
-<title>Pregunta</title>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    {% load static %}
+    <link rel="stylesheet" href="{% static '/css/pregunta.css' %}" />
+    <link rel="stylesheet" href="{% static '/css/crear-cuestionario.css' %}" />
+    <title>Pregunta</title>
 </head>
 
 {% include "navbar.html" %}
 
 <div>
-
     <form class="form" action="{% url 'crear-preguntas-retro' %}" method="POST" onsubmit="return saveAns()">
         <h1>Iniciar cuestionario</h1>
         {% csrf_token %}
@@ -28,8 +27,84 @@
             {% endfor %}
         </select>
         <button class="crear-cuestionario-button" id="crear" type="submit">Iniciar cuestionario</button>
-
     </form>
-
-
 </div>
+
+<!-- Spinner -->
+<div id="spinner-overlay" class="spinner-overlay" style="display: none;">
+    <div class="spinner-container">
+        <div class="spinner"></div>
+        <div id="spinner-timer">0:00</div>
+        <p>Tiempo de espera aprox. 1:00 min</div>
+    </div>
+</div>
+
+<script>
+    let interval;
+    function saveAns() {
+        // Mostrar el spinner
+        document.getElementById('spinner-overlay').style.display = 'flex';
+
+        // Iniciar el temporizador
+        let seconds = 0;
+        let minutes = 0;
+        interval = setInterval(() => {
+            seconds++;
+            if (seconds === 60) {
+                seconds = 0;
+                minutes++;
+            }
+            document.getElementById('spinner-timer').innerText = `${minutes}:${seconds.toString().padStart(2, '0')}`;
+        }, 1000);
+
+        return true; // Permite el envío del formulario
+    }
+</script>
+
+<style>
+    /* Estilo del overlay */
+    .spinner-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background-color: rgba(0, 0, 0, 0.5);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 9999;
+    }
+
+    /* Estilo del contenedor del spinner */
+    .spinner-container {
+        text-align: center;
+        color: white;
+    }
+
+    /* Estilo del spinner */
+    .spinner {
+        border: 5px solid rgba(255, 255, 255, 0.3);
+        border-top: 5px solid white;
+        border-radius: 50%;
+        width: 50px;
+        height: 50px;
+        animation: spin 1s linear infinite;
+    }
+
+    @keyframes spin {
+        0% {
+            transform: rotate(0deg);
+        }
+        100% {
+            transform: rotate(360deg);
+        }
+    }
+
+    /* Estilo del temporizador */
+    #spinner-timer {
+        margin-top: 10px;
+        font-size: 1.2rem;
+        font-weight: bold;
+    }
+</style>
