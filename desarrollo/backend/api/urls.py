@@ -16,6 +16,6 @@ urlpatterns = [
     path('comentario_cuestionario',comentario_cuestionario,name='comentario_cuestionario'),
     path('progreso/', obtener_progreso, name='obtener-progreso'),
     path('get_chart/', get_chart, name='get_chart'),
-    path('get_barra/', get_barra, name='get_barra'),
+    path('get_barra/<str:materia>/', get_barra, name='get_barra'),
     path('crear-preguntas-retro/', crear_preguntas_retro,name='crear-preguntas-retro'),
 ]

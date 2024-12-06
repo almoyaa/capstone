@@ -101,7 +101,7 @@ class Cuestionario(models.Model):
     preguntas = models.ManyToManyField(Pregunta)
     respuestas_correctas = models.IntegerField(null=True, blank=True)
     respuestas_usuario = models.ManyToManyField(Respuesta)
-    fecha_creacion = models.DateTimeField(auto_now_add=True, null=True, blank=True)  # Añadimos este campo
+    fecha_creacion = models.DateTimeField(null=True, blank=True) 
     fecha_realizacion = models.DateTimeField(null=True, blank=True)
 
     def __str__(self):

@@ -109,6 +109,7 @@ class CuestionarioCreateView(generics.CreateAPIView):
 
         # Agregar el nuevo título al data del request antes de pasar al serializer
         request.data['titulo'] = titulo_con_fecha
+        request.data['fecha_creacion'] = datetime.now()
 
         # Pasar los datos al serializer
         serializer = self.get_serializer(data=request.data)
@@ -685,7 +686,7 @@ def obtener_progreso(request):
 
 
 
-def get_chart(request):
+def get_chart(request, materia):
     # Filtrar los cuestionarios de la materia "Biología"
     cuestionarios = Cuestionario.objects.filter(
         materia='Química',
@@ -835,12 +836,12 @@ def preguntas_faltantes(cantidad, temarios):
 
 
 @csrf_exempt
-def get_barra(request):
+def get_barra(request,materia):
     # Filtrar los cuestionarios por materia
-    cuestionarios = Cuestionario.objects.filter(materia='Matemática M2')
+    cuestionarios = Cuestionario.objects.filter(materia=materia)
     
     # Obtener los temas relacionados con la materia
-    temas = Tema.objects.filter(materia__nombre='Matemática M2').distinct()
+    temas = Tema.objects.filter(materia__nombre=materia).distinct()
     tema_nombres = [tema.nombre for tema in temas]
 
     # Construir el dataset para el gráfico

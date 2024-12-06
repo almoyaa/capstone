@@ -308,7 +308,8 @@
 
 <script>
   // Obtener los datos desde la vista Django a través de fetch
-  fetch('http://127.0.0.1:8000/api/get_barra/')
+  var materia = "{{ cuestionario.materia }}";
+  fetch(`http://127.0.0.1:8000/api/get_barra/${materia}/`)
       .then(response => response.json())
       .then(data => {
           // Inicializar el gráfico ECharts
