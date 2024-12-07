@@ -78,7 +78,7 @@ def cargar_pdfs_desde_carpeta(carpeta, embeddings_model):
     return faiss_index.as_retriever()
 
 EMBEDDINGS = OpenAIEmbeddings(model="text-embedding-3-small")
-CARPETAS_PDF = "C:/Users/Seba/Desktop/Notebooks/Contenidos"
+CARPETAS_PDF = "/Users/sebastian/Downloads/Contenidos"
 RETRIEVER = cargar_pdfs_desde_carpeta(CARPETAS_PDF, EMBEDDINGS)
 RETRIEVER_TOOL = create_retriever_tool(
                 RETRIEVER,
