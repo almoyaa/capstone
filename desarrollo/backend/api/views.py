@@ -113,7 +113,9 @@ class CuestionarioCreateView(generics.CreateAPIView):
 
         # Agregar el nuevo título al data del request antes de pasar al serializer
         request.data['titulo'] = titulo_con_fecha
-        request.data['fecha_creacion'] = datetime.now()
+        request.data['fecha_creacion'] = datetime.now().strftime("%d/%m/%Y %H:%M")
+        print("CREACION DE CUESTIONARIO")
+        print(request.data['fecha_creacion'])
 
         # Pasar los datos al serializer
         serializer = self.get_serializer(data=request.data)
@@ -637,8 +639,14 @@ def obtener_progreso(request):
     if request.method == 'GET':
         try:
             materia = request.GET.get('materia')
+<<<<<<< HEAD
             
             # Obtener cuestionarios de la materia específica
+=======
+            print(materia)
+            
+            # Obtener cuestionarios de la materia especÃfica
+>>>>>>> b0064e0d (final 2.03.04)
             cuestionarios = Cuestionario.objects.filter(
                 materia=materia,
                 fecha_creacion__isnull=False
@@ -680,7 +688,6 @@ def obtener_progreso(request):
             import traceback
             print(traceback.format_exc())
             return JsonResponse({'error': str(e)}, status=500)
-
 
 
 def get_chart(request, materia):
