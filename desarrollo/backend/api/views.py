@@ -78,7 +78,7 @@ def cargar_pdfs_desde_carpeta(carpeta, embeddings_model):
     return faiss_index.as_retriever()
 
 EMBEDDINGS = OpenAIEmbeddings(model="text-embedding-3-small")
-CARPETAS_PDF = "C:/Users/Seba/Desktop/Notebooks/Contenidos"
+CARPETAS_PDF = "C:/Users/Alejandro/capstone/desarrollo/backend/api/pdf"
 RETRIEVER = cargar_pdfs_desde_carpeta(CARPETAS_PDF, EMBEDDINGS)
 RETRIEVER_TOOL = create_retriever_tool(
                 RETRIEVER,
@@ -631,51 +631,44 @@ def comentario_cuestionario(request):
 @csrf_exempt
 def obtener_progreso(request):
     if request.method == 'GET':
-        print(request)
         try:
             materia = request.GET.get('materia')
-
-            cantidad = int(request.GET.get('cantidad', 5))
             
-            print(materia)
+            # Obtener cuestionarios de la materia específica
             cuestionarios = Cuestionario.objects.filter(
-                    materia=materia,
-                    fecha_creacion__isnull=False
-                ).order_by('fecha_creacion')
+                materia=materia,
+                fecha_creacion__isnull=False
+            ).order_by('fecha_creacion')
             
-            print(f"Cuestionarios encontrados para {materia}: {cuestionarios.count()}")
-            
-            resultados = []
+            # Diccionario para almacenar resultados por tema
+            resultados_por_tema = {}
             fechas = []
             
             for cuestionario in cuestionarios:
-                # Obtener todas las preguntas del cuestionario
-                preguntas = cuestionario.preguntas.all()  # Obtener todas las preguntas
+                fecha = cuestionario.fecha_creacion.strftime('%Y-%m-%d')
+                fechas.append(fecha)
                 
-                # Verificar si el cuestionario tiene exactamente la cantidad de preguntas seleccionadas
-                if preguntas.count() != cantidad:
-                    continue  # Saltar este cuestionario si no cumple con la cantidad
-
-                # Contar respuestas correctas
-                total_preguntas_correctas = cuestionario.respuestas_correctas
+                # Obtener respuestas correctas por tema
+                temas_correctos = defaultdict(int)
+                for respuesta in cuestionario.respuestas_usuario.filter(es_correcta=True):
+                    tema = respuesta.pregunta.tema.nombre
+                    temas_correctos[tema] += 1
                 
-                resultados.append(total_preguntas_correctas)  # Guardar solo las respuestas correctas
-                fechas.append(cuestionario.fecha_creacion.strftime('%Y-%m-%d'))
-            
-            # Generar valores del eje Y según la cantidad seleccionada
-            if cantidad <= 10:
-                valores = list(range(cantidad + 1))  # [0,1,2,3,4,5] o [0,1,2,3,4,5,6,7,8,9,10]
-            else:
-                valores = list(range(0, cantidad + 1, 5))  # [0,5,10,15] o [0,5,10,15,20]
-            
-            print(f"Valores del eje Y: {valores}")  # Debug
-            print(f"Resultados: {resultados}")      # Debug
-            print(f"Fechas: {fechas}")             # Debug
+                # Guardar resultados por tema
+                for tema, correctas in temas_correctos.items():
+                    if tema not in resultados_por_tema:
+                        resultados_por_tema[tema] = []
+                    resultados_por_tema[tema].append(correctas)
+                
+                # Asegurar que todos los temas tengan un valor para cada fecha
+                for tema in resultados_por_tema:
+                    if len(resultados_por_tema[tema]) < len(fechas):
+                        resultados_por_tema[tema].append(0)
             
             return JsonResponse({
-                'valores': valores,
+                'valores': list(range(21)),
                 'fechas': fechas,
-                'resultados': resultados
+                'resultados_por_tema': resultados_por_tema
             })
             
         except Exception as e:

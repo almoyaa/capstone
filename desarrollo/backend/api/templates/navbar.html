@@ -24,18 +24,13 @@
             <div class="nav-container">
                 <ul class="nav-tabs">
                     <li class="nav-tab {% if request.path == '/' %}active{% endif %}">
-                        <a href="{% url 'crear-cuestionario' %}">
+                        <a href="{% url 'index-page' %}">
                             <i class="fas fa-home"></i> Inicio
                         </a>
                     </li>
                     <li class="nav-tab {% if request.path == '/crear-cuestionario/' %}active{% endif %}">
                         <a href="{% url 'crear-cuestionario' %}">
                             <i class="fas fa-puzzle-piece"></i> Cuestionarios
-                        </a>
-                    </li>
-                    <li class="nav-tab {% if request.path == '/index-page/' %}active{% endif %}">
-                        <a href="{% url 'index-page' %}">
-                            <i class="fas fa-question-circle"></i> Preguntas
                         </a>
                     </li>
                     <li class="nav-tab {% if request.path == '/historial/' %}active{% endif %}">
