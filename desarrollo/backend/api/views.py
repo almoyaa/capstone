@@ -78,11 +78,9 @@ def cargar_pdfs_desde_carpeta(carpeta, embeddings_model):
     return faiss_index.as_retriever()
 
 EMBEDDINGS = OpenAIEmbeddings(model="text-embedding-3-small")
-<<<<<<< HEAD
-CARPETAS_PDF = "C:/Users/Alejandro/capstone/desarrollo/backend/api/pdf"
-=======
+
 CARPETAS_PDF = "/Users/sebastian/Downloads/Contenidos"
->>>>>>> 8143b3b035f6260ebffc42632ea57935d91f368e
+
 RETRIEVER = cargar_pdfs_desde_carpeta(CARPETAS_PDF, EMBEDDINGS)
 RETRIEVER_TOOL = create_retriever_tool(
                 RETRIEVER,
@@ -639,14 +637,9 @@ def obtener_progreso(request):
     if request.method == 'GET':
         try:
             materia = request.GET.get('materia')
-<<<<<<< HEAD
-            
-            # Obtener cuestionarios de la materia específica
-=======
             print(materia)
             
             # Obtener cuestionarios de la materia especÃfica
->>>>>>> b0064e0d (final 2.03.04)
             cuestionarios = Cuestionario.objects.filter(
                 materia=materia,
                 fecha_creacion__isnull=False
