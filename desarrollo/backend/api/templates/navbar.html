@@ -10,6 +10,9 @@
     <div class="nav-wrapper">
         <div class="logo-container">
             <img class="logo" src="{% static '/img/logo.png' %}" alt="Logo">
+            {% if user.is_authenticated %}
+            <div>Bienvenido {{ user }}</div>
+            {% endif %}
         </div>
         <nav>
             <input class="hidden" type="checkbox" id="menuToggle">

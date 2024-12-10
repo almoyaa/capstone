@@ -21,11 +21,10 @@
 <body>
   <div class="container">
     <h1>Retroalimentación</h1>
-    <div class="graph-container">
-      <h3>Resultados del Cuestionario</h3>
+    <div style="overflow-x: auto; max-width: 1200px;">
+      <h4>Cantidad de respuestas correctas por Tema de los cuestionarios de {{cuestionario.materia}}</h4>
+      <div id="barra"></div>
     </div>
-
-
     <div class="sub-container">
       <ul class="container-info">
         <h3>{{ cuestionario.titulo }}</h3>
@@ -66,17 +65,13 @@
             <div id="spinner" style="display: none;">
               <p>Cargando comentario...</p>
               <div class="spinner"></div>
-              
+
             </div>
-            
+
           </div>
 
         </li>
       </ul>
-      <div style="width: 700px; height: 400px; overflow-x: auto;">
-        <h3>Cantidad de respuestas correctas por Tema</h3>
-        <div id="barra" style="width: auto; height: 400px;"></div>
-    </div>
     </div>
     <div>
       <h1>Respuestas del cuestionario</h1>
@@ -118,8 +113,8 @@
         {% endfor %}
       </div>
     </div>
-    
-  
+
+
 
     <!-- Contenedor de diálogo de retroalimentación -->
     <div id="retroalimentacion-dialogo" style="display: none">
@@ -207,20 +202,20 @@
         const erroresPorTema = JSON.parse('{{ errores_por_tema|safe }}');
         const cuestionarioId = {{ cuestionario.id| safe }};
         const response = await fetch("{% url 'comentario_cuestionario' %}", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "X-CSRFToken": "{{ csrf_token }}"
-          },
-          body: JSON.stringify({ cuestionario_id: cuestionarioId })
+        method: "POST",
+        headers: {
+        "Content-Type": "application/json",
+        "X-CSRFToken": "{{ csrf_token }}"
+        },
+        body: JSON.stringify({ cuestionario_id: cuestionarioId })
         });
 
     // Verifica si la respuesta es exitosa
-    if (!response.ok) {
-      throw new Error("Error en la solicitud");
-    }
+        if (!response.ok) {
+          throw new Error("Error en la solicitud");
+        }
 
-    // Convierte la respuesta a JSON
+      // Convierte la respuesta a JSON
     const data = await response.json();
 
     // Selecciona el div y muestra los datos obtenidos
@@ -310,38 +305,38 @@
   // Obtener los datos desde la vista Django a través de fetch
   var materia = "{{ cuestionario.materia }}";
   fetch(`http://127.0.0.1:8000/api/get_barra/${materia}/`)
-      .then(response => response.json())
-      .then(data => {
-          // Inicializar el gráfico ECharts
-          var chartDom = document.getElementById('barra');
-          var myChart = echarts.init(chartDom);
+    .then(response => response.json())
+    .then(data => {
+      // Inicializar el gráfico ECharts
+      var chartDom = document.getElementById('barra');
+      var myChart = echarts.init(chartDom);
 
-          // Configuración del gráfico con los datos recibidos
-          var option = {
-              legend: {},
-              tooltip: {},
-              dataset: {
-                  source: data.dataset.source,
-                  dimensions: data.dataset.dimensions,
-              },
-              xAxis: {
-                  type: 'category',
-                  name: 'Cuestionarios',
-              },
-              yAxis: {
-                  name: 'Respuestas Correctas',
-              },
-              series: data.dataset.dimensions
-                  .slice(1) // Excluir el primer elemento, que es 'cuestionario'
-                  .map(() => ({
-                      type: 'bar'
-                  })),
-          };
+      // Configuración del gráfico con los datos recibidos
+      var option = {
+        legend: {},
+        tooltip: {},
+        dataset: {
+          source: data.dataset.source,
+          dimensions: data.dataset.dimensions,
+        },
+        xAxis: {
+          type: 'category',
+          name: 'Cuestionarios',
+        },
+        yAxis: {
+          name: 'Respuestas Correctas',
+        },
+        series: data.dataset.dimensions
+          .slice(1) // Excluir el primer elemento, que es 'cuestionario'
+          .map(() => ({
+            type: 'bar'
+          })),
+      };
 
-          // Establecer la opción del gráfico
-          myChart.setOption(option);
-      })
-      .catch(error => console.error('Error al cargar los datos del gráfico:', error));
+      // Establecer la opción del gráfico
+      myChart.setOption(option);
+    })
+    .catch(error => console.error('Error al cargar los datos del gráfico:', error));
 </script>
 
 

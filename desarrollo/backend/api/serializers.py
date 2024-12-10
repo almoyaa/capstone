@@ -37,7 +37,7 @@ class CuestionarioSerializer(serializers.ModelSerializer):
     
     class Meta:
         model = Cuestionario
-        fields = ['id', 'titulo', 'descripcion', 'materia', 'preguntas', 'respuestas_correctas', 'respuestas_usuario']
+        fields = ['id', 'titulo', 'descripcion', 'materia', 'preguntas', 'respuestas_correctas', 'respuestas_usuario','fecha_creacion']
         
         
     

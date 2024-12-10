@@ -103,15 +103,13 @@ class CuestionarioCreateView(generics.CreateAPIView):
     serializer_class = CuestionarioSerializer
 
     def create(self, request, *args, **kwargs):
-        # Obtener la fecha y hora actual en formato 'DD/MM/YYYY HH:MM'
-        fecha_actual = datetime.now().strftime("%d/%m/%Y %H:%M")
-        
         # Crear un nuevo título con la fecha y hora
-        titulo_con_fecha = f"Cuestionario de {request.data.get('materia')} - {fecha_actual}"
+        titulo_con_fecha = f"Cuestionario de {request.data.get('materia')} - {datetime.now().strftime("%d/%m/%Y %H:%M")}"
 
         # Agregar el nuevo título al data del request antes de pasar al serializer
         request.data['titulo'] = titulo_con_fecha
-        request.data['fecha_creacion'] = datetime.now().strftime("%d/%m/%Y %H:%M")
+        request.data['fecha_creacion'] = datetime.now()
+        print(request.data)
         print("CREACION DE CUESTIONARIO")
         print(request.data['fecha_creacion'])
 
@@ -632,6 +630,8 @@ def comentario_cuestionario(request):
         return JsonResponse({"error": "Método de solicitud no permitido."}, status=405)
 
 
+
+
 @csrf_exempt
 def obtener_progreso(request):
     if request.method == 'GET':
@@ -639,7 +639,7 @@ def obtener_progreso(request):
             materia = request.GET.get('materia')
             print(materia)
             
-            # Obtener cuestionarios de la materia especÃfica
+            # Obtener cuestionarios de la materia específica
             cuestionarios = Cuestionario.objects.filter(
                 materia=materia,
                 fecha_creacion__isnull=False
@@ -650,7 +650,8 @@ def obtener_progreso(request):
             fechas = []
             
             for cuestionario in cuestionarios:
-                fecha = cuestionario.fecha_creacion.strftime('%Y-%m-%d')
+                # Formatear la fecha con precisión de hora y minuto
+                fecha = cuestionario.fecha_creacion.isoformat()
                 fechas.append(fecha)
                 
                 # Obtener respuestas correctas por tema
@@ -672,7 +673,7 @@ def obtener_progreso(request):
             
             return JsonResponse({
                 'valores': list(range(21)),
-                'fechas': fechas,
+                'fechas': fechas,  # En formato ISO 8601
                 'resultados_por_tema': resultados_por_tema
             })
             
@@ -681,6 +682,7 @@ def obtener_progreso(request):
             import traceback
             print(traceback.format_exc())
             return JsonResponse({'error': str(e)}, status=500)
+
 
 
 def get_chart(request, materia):
@@ -951,7 +953,7 @@ def crear_preguntas_retro(request):
                     ]
                     """),
                 ("human",
-                    f"""Dame {cantidad} preguntas en formato JSON de todos estos temarios: {temarios}. Dame las preguntas exclusivamente sobre de los 2 temarios con menor porcentaje de aprobacion, en caso de ser todos 0, que haya de cada tema: {temas_ordenados}.
+                    f"""Dame {cantidad} preguntas en formato JSON de los temarios entregados a continuacion. Dame las preguntas exclusivamente sobre de los 2 temarios con menor porcentaje de aprobacion. En caso de ser todos 0, que exista por lo menos una pregunta de cada tema: {temas_ordenados}.
                     """),
                 MessagesPlaceholder(variable_name="agent_scratchpad"),
             ])

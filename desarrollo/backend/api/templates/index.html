@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="es">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -11,9 +12,10 @@
     {% load static %}
     <link rel="stylesheet" href="{% static 'css/index.css' %}">
 </head>
+
 <body>
     {% include "navbar.html" %}
-    
+
     <div class="dashboard-container">
         <div class="filters-section">
             <h2>Filtros</h2>
@@ -37,115 +39,124 @@
 
     <script>
         document.addEventListener('DOMContentLoaded', function() {
-            // Inicializar el gráfico
-            const ctx = document.getElementById('progressChart').getContext('2d');
-            let myChart = new Chart(ctx, {
-                type: 'line',
-                data: {
-                    datasets: [] // Inicialmente vacío, se llenará dinámicamente
+    const ctx = document.getElementById('progressChart').getContext('2d');
+    let myChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+            datasets: [] // Inicialmente vacío
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    position: 'top',
                 },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: {
-                        legend: {
-                            position: 'top',
-                        },
-                        title: {
-                            display: true,
-                            text: 'Respuestas correctas por tema'
+                title: {
+                    display: true,
+                    text: 'Respuestas correctas por tema'
+                }
+            },
+            scales: {
+                y: {
+                    ticks: {
+                        stepSize: 1,
+                        callback: function(value) {
+                            return value;
                         }
                     },
-                    scales: {
-                        y: {
-                            min: 0,
-                            max: 20,
-                            ticks: {
-                                stepSize: 1,
-                                callback: function(value) {
-                                    return value <= 20 ? value : null;
-                                }
-                            },
-                            title: {
-                                display: true,
-                                text: 'Cantidad de respuestas correctas'
-                            }
-                        },
-                        x: {
-                            type: 'time',
-                            time: {
-                                unit: 'day',
-                                displayFormats: {
-                                    day: 'DD-MM-YYYY'
-                                }
-                            },
-                            ticks: {
-                                source: 'data',
-                                maxRotation: 45
-                            },
-                            title: {
-                                display: true,
-                                text: 'Fecha de realización de cuestionario'
-                            }
+                    title: {
+                        display: true,
+                        text: 'Cantidad de respuestas correctas'
+                    }
+                },
+                x: {
+                    type: 'time',
+                    time: {
+                        unit: 'minute', // Agrupación por minutos
+                        displayFormats: {
+                            minute: 'DD-MM-YYYY HH:mm' // Formato para mostrar
                         }
+                    },
+                    ticks: {
+                        source: 'data', // Mostrar solo los ticks de los datos
+                        autoSkip: true, // Activar el ajuste automático
+                        maxRotation: 45, // Rotar etiquetas para evitar superposición
+                        major: {
+                            enabled: true // Resaltar ticks principales si es necesario
+                        }
+                    },
+                    title: {
+                        display: true,
+                        text: 'Fecha de realización de cuestionario'
                     }
                 }
-            });
-
-            // Función para generar color aleatorio
-            function getRandomColor() {
-                const letters = '0123456789ABCDEF';
-                let color = '#';
-                for (let i = 0; i < 6; i++) {
-                    color += letters[Math.floor(Math.random() * 16)];
-                }
-                return color;
             }
+        }
+    });
 
-            // Función para actualizar el gráfico
-            function actualizarGrafico() {
-                const materia = document.getElementById('materia').value;
+    // Función para generar color aleatorio
+    function getRandomColor() {
+        const letters = '0123456789ABCDEF';
+        let color = '#';
+        for (let i = 0; i < 6; i++) {
+            color += letters[Math.floor(Math.random() * 16)];
+        }
+        return color;
+    }
 
-                fetch(`/api/progreso/?materia=${materia}`)
-                    .then(response => response.json())
-                    .then(datos => {
-                        console.log("Datos recibidos:", datos);
+    // Función para actualizar el gráfico
+    function actualizarGrafico() {
+        const materia = document.getElementById('materia').value;
 
-                        // Limpiar datasets existentes
-                        myChart.data.datasets = [];
+        fetch(`/api/progreso/?materia=${materia}`)
+            .then(response => response.json())
+            .then(datos => {
+                console.log("Datos recibidos:", datos);
 
-                        // Crear un dataset para cada tema
-                        Object.entries(datos.resultados_por_tema).forEach(([tema, resultados]) => {
-                            const color = getRandomColor();
-                            const dataPoints = datos.fechas.map((fecha, index) => ({
-                                x: fecha,
-                                y: resultados[index] || 0
-                            }));
+                // Limpiar datasets existentes
+                myChart.data.datasets = [];
 
-                            myChart.data.datasets.push({
-                                label: tema,
-                                data: dataPoints,
-                                borderColor: color,
-                                backgroundColor: color + '20', // Añadir transparencia
-                                tension: 0.4,
-                                fill: true
-                            });
-                        });
+                // Calcular el valor máximo del eje Y
+                let maxYValue = 0;
 
-                        // Forzar la actualización del gráfico
-                        myChart.update('none');
-                    })
-                    .catch(error => {
-                        console.error('Error al actualizar el gráfico:', error);
+                // Crear un dataset para cada tema
+                Object.entries(datos.resultados_por_tema).forEach(([tema, resultados]) => {
+                    const color = getRandomColor();
+                    const dataPoints = datos.fechas.map((fecha, index) => {
+                        const valor = resultados[index] || 0;
+                        maxYValue = Math.max(maxYValue, valor); // Actualizar el valor máximo
+                        const fechaObjeto = new Date(fecha); // Convertir a objeto Date
+                        return { x: fechaObjeto, y: valor };
                     });
-            }
 
-            // Eventos para los filtros
-            document.getElementById('materia').addEventListener('change', actualizarGrafico);
+                    myChart.data.datasets.push({
+                        label: tema,
+                        data: dataPoints,
+                        borderColor: color,
+                        backgroundColor: color + '20', // Añadir transparencia
+                        tension: 0.4,
+                        fill: true
+                    });
+                });
 
-            // Llamar a actualizarGrafico inicialmente
-            actualizarGrafico();
-        });
+                // Actualizar el eje Y dinámicamente
+                myChart.options.scales.y.max = maxYValue + 1; // Agregar un margen superior
+                myChart.update();
+            })
+            .catch(error => {
+                console.error('Error al actualizar el gráfico:', error);
+            });
+    }
+
+    // Eventos para los filtros
+    document.getElementById('materia').addEventListener('change', actualizarGrafico);
+
+    // Llamar a actualizarGrafico inicialmente
+    actualizarGrafico();
+});
+
     </script>
 </body>
+
 </html>

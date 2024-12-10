@@ -1,8 +1,4 @@
-.chart {
-    width: 100%;
-    min-height: 400px;
-}
-
-canvas {
-    max-width: 800px !important;
+#barra{
+width: 1200px;
+height: 500px;
 }
